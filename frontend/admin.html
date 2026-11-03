@@ -66,8 +66,14 @@ tr.click{cursor:pointer;} tr.click:hover{background:rgba(231,194,125,.07);}
 .modal-caja{background:var(--noche-2);border:1px solid rgba(231,194,125,.25);border-radius:18px;max-width:680px;width:100%;max-height:92vh;overflow:auto;padding:20px;}
 .qr-mini{display:inline-block;background:#fff;border-radius:12px;padding:8px;margin:6px;text-align:center;color:#1d1830;font-weight:700;font-size:12px;}
 .qr-mini img{display:block;width:170px;height:170px;}
-.fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.fila{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.fila + .fila{margin-top:10px;}
 .fila input{flex:1;min-width:180px;}
+/* Campos del panel: oscuros, con los colores del tema (los blancos encandilaban sobre el fondo de noche). */
+.vista input, .vista select, .vista textarea{background:rgba(255,255,255,.06);color:var(--crema);border:1.5px solid rgba(255,255,255,.18);}
+.vista input::placeholder, .vista textarea::placeholder{color:var(--gris);opacity:.8;}
+.vista input:focus, .vista select:focus, .vista textarea:focus{border-color:var(--oro);background:rgba(255,255,255,.1);}
+.vista select option{color:#1d1830;}
 .ok-msg{color:#86efac;font-size:13px;} .err-msg{color:#fca5a5;font-size:13px;}
 .login{max-width:380px;margin:30px auto;}
 .login img{display:block;width:130px;height:130px;margin:0 auto 10px;border-radius:50%;object-fit:cover;background:#fff;}
