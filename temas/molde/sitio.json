@@ -1,0 +1,31 @@
+{
+  "nombre": "Gala de Fin de Año 2026",
+  "lema": "",
+  "organiza": "Academia de ejemplo",
+  "lugar": "Teatro de ejemplo",
+  "direccion": "Calle 123, Santiago del Estero",
+  "ciudad": "Santiago del Estero",
+  "instagram": "",
+  "ayudaWhatsapp": "",
+  "menores": "",
+  "modo": "gala",
+  "eventos": [
+    {
+      "nombre": "Gala de Fin de Año 2026",
+      "fecha": "2026-12-13",
+      "hora": "20:00",
+      "puertas": "19:30 h",
+      "artistas": [],
+      "tipos": [
+        {
+          "id": "general",
+          "nombre": "Entrada general",
+          "corto": "General",
+          "detalle": "Ubicación libre",
+          "precio": 10000,
+          "cupo": 500
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "nombre": "Patio Lo de O-Li",
+  "lema": "Espacio Verde · Patio santiagueño",
+  "organiza": "Patio Lo de O-Li",
+  "lugar": "Patio Lo de O-Li",
+  "direccion": "Av. Besares 2279",
+  "ciudad": "La Banda, Santiago del Estero",
+  "instagram": "",
+  "ayudaWhatsapp": "",
+  "menores": "",
+  "modo": "cartelera",
+  "sobre": {
+    "titulo": "El patio",
+    "parrafos": [
+      "Patio Lo de O-Li es un espacio verde sobre la avenida Besares, en La Banda: un patio santiagueño al aire libre, bajo los árboles, donde el folklore se vive de cerca.",
+      "Un lugar tradicional de La Banda, ligado a la identidad cultural santiagueña. Dos veces por mes abrimos el patio para peñas con artistas de la provincia y del país, para compartir con la familia y los amigos.",
+      "En Santiago, la chacarera es danza, poesía y encuentro: vive en la peña, en el patio y en la guitarreada familiar, donde el canto y el baile son de todos. Eso es lo que buscamos que pase en cada noche del patio."
+    ]
+  },
+  "feriantes": {
+    "titulo": "Feriantes y emprendedores",
+    "texto": "¿Tenés un emprendimiento y querés vender en nuestras peñas? En cada fecha reservamos lugares para feriantes y emprendedores. Los lugares son limitados: consultá disponibilidad y condiciones por WhatsApp.",
+    "whatsapp": "5493855803901",
+    "mensaje": "Hola, quiero consultar por un lugar para vender en una peña del Patio Lo de O-Li."
+  },
+  "destacados": [
+    {
+      "icono": "🎻",
+      "titulo": "Folklore en vivo",
+      "texto": "Peñas con artistas santiagueños y del país, dos veces por mes."
+    },
+    {
+      "icono": "🌳",
+      "titulo": "Al aire libre",
+      "texto": "Un patio verde, bajo los árboles, para vivir la noche santiagueña."
+    },
+    {
+      "icono": "🧺",
+      "titulo": "Feriantes y emprendedores",
+      "texto": "En cada peña, puestos de emprendedores de la zona."
+    },
+    {
+      "icono": "📲",
+      "titulo": "Entrada con QR",
+      "texto": "Comprás online, pagás por transferencia y entrás con el QR en el celular."
+    }
+  ],
+  "eventos": [
+    {
+      "nombre": "Peña Las Dos Lunas",
+      "subtitulo": "3ª edición · 6° aniversario",
+      "fecha": "2026-11-07",
+      "artistas": [
+        "Claudio Acosta",
+        "Gabriel Acosta",
+        "Enrique Marquetti"
+      ],
+      "tipos": [
+        {
+          "id": "general",
+          "nombre": "Entrada general",
+          "corto": "General",
+          "precio": 10000,
+          "cupo": 2000
+        }
+      ]
+    },
+    {
+      "nombre": "La Vuelta de Los Arcanos",
+      "subtitulo": "Arcanos del Desierto · ¡La vuelta!",
+      "fecha": "2026-11-14",
+      "artistas": [
+        "Arcanos del Desierto",
+        "Los Capis",
+        "Dúo Lemos Bravo"
+      ],
+      "tipos": [
+        {
+          "id": "anticipada",
+          "nombre": "Primeras anticipadas",
+          "corto": "Anticipada",
+          "precio": 10000,
+          "cupo": 2000
+        }
+      ],
+      "descripcion": "Arcanos del Desierto es una orquesta de guaracha santiagueña creada por el bajista Mariano Sarquiz: una docena de músicos que mezclan la guaracha con salsa, jazz y aires árabes, con un vestuario y una puesta en escena que no pasan desapercibidos.\nLa vuelta de Los Arcanos: una noche de baile, junto a Los Capis y el Dúo Lemos Bravo."
+    },
+    {
+      "nombre": "Kijanoss 20 años",
+      "subtitulo": "Los Kijanoss · 20 años",
+      "fecha": "2026-11-22",
+      "artistas": [
+        "Los Kijanoss",
+        "Dany Hoyos",
+        "Los Sacheros"
+      ],
+      "tipos": [],
+      "nota": "Cartelera a confirmar",
+      "externoTexto": "Venta en la ticketera oficial de Los Kijanoss",
+      "descripcion": "Los Kijanoss se formaron en Santiago del Estero en 2006 y este año festejan sus 20 años. Ganaron el Pre-Cosquín 2009, llegaron a la final de Talento Argentino y en 2025 tocaron en el escenario mayor de la Fiesta del Poncho.\nLos acompaña Dany Hoyos, referente de la guaracha santiagueña, con 40 años de carrera."
+    },
+    {
+      "nombre": "Fiesta del Violinero",
+      "subtitulo": "La Fiesta del Violinero",
+      "fecha": "2026-12-04",
+      "artistas": [
+        "Néstor Garnica",
+        "invitados"
+      ],
+      "tipos": [],
+      "nota": "Cartelera a confirmar",
+      "descripcion": "Néstor Garnica nació en La Banda y empezó de chico en El Alero Quichua Santiagueño, junto a Sixto Palavecino. Acompañó a Mercedes Sosa y a Los Manseros Santiagueños, y como solista lleva más de veinte años, seis discos y la Consagración en Cosquín.\nLa Fiesta del Violinero es su peña: una celebración del violín santiagueño que recorre el país y vuelve a su casa, en La Banda."
+    }
+  ]
+}

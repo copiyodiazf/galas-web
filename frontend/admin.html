@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel</title>
+<meta name="theme-color" content="#141022">
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sistema.css">
+<link rel="stylesheet" href="/tema.css">
+<style>
+.marco{max-width:1040px;}
+.barra{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.barra .quien{font-size:13px;color:var(--gris);}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.tabs button{font:800 13px var(--f-texto);letter-spacing:.06em;text-transform:uppercase;padding:10px 14px;border-radius:999px;cursor:pointer;
+  background:rgba(246,240,230,.06);color:var(--crema);border:1px solid rgba(246,240,230,.18);}
+.tabs button.activa{background:var(--oro);color:#1d1830;border-color:var(--oro);}
+.vista{display:none;} .vista.activa{display:block;}
+.chico{font:700 13px var(--f-texto);padding:9px 14px;border-radius:999px;cursor:pointer;border:1px solid rgba(246,240,230,.25);background:transparent;color:var(--crema);text-decoration:none;display:inline-block;}
+.chico.oro{background:var(--oro);color:#1d1830;border-color:var(--oro);}
+.chico.rojo{border-color:rgba(217,83,79,.6);color:#fca5a5;}
+.selevento{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(231,194,125,.08);border:1px solid rgba(231,194,125,.25);border-radius:14px;padding:10px 12px;margin-bottom:14px;}
+.selevento label{margin:0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--oro);}
+.selevento select{flex:1;min-width:220px;font-size:15px;padding:10px 12px;}
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px;}
+.cifra{background:rgba(246,240,230,.05);border:1px solid rgba(246,240,230,.12);border-radius:14px;padding:14px;}
+.cifra b{display:block;font-family:var(--f-display);font-weight:700;font-size:28px;line-height:1.1;color:var(--oro-vivo);}
+.cifra span{font-size:12px;color:var(--gris);}
+.cifra.alerta{border-color:rgba(217,83,79,.6);background:rgba(217,83,79,.1);}
+.cifra.fuerte{border-color:var(--oro);background:color-mix(in srgb,var(--oro) 12%,transparent);}
+.filtros{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.filtros button{font:700 13px var(--f-texto);color:var(--crema);background:rgba(246,240,230,.06);border:1px solid rgba(246,240,230,.14);border-radius:99px;padding:7px 13px;cursor:pointer;}
+.filtros button.activa{background:var(--oro);color:var(--noche);border-color:transparent;}
+.filtros button b{margin-left:6px;opacity:.7;}
+.dia-barra{height:8px;border-radius:99px;background:var(--oro);min-width:3px;}
+.etq.pagando{background:rgba(231,194,125,.35);}
+.noche{background:rgba(246,240,230,.05);border:1px solid rgba(246,240,230,.12);border-radius:16px;padding:16px;}
+.noche h3{font-family:var(--f-display);font-weight:700;font-size:22px;}
+.barra-cupo{height:12px;border-radius:999px;background:rgba(246,240,230,.1);overflow:hidden;margin:10px 0 6px;display:flex;}
+.barra-cupo i{display:block;height:100%;}
+.noches{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.tabla{overflow:auto;border-radius:14px;border:1px solid rgba(246,240,230,.12);margin-top:12px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid rgba(246,240,230,.07);white-space:nowrap;}
+th{background:rgba(28,22,48,.97);color:var(--oro);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;position:sticky;top:0;}
+td.n,th.n{text-align:right;}
+tr.click{cursor:pointer;} tr.click:hover{background:rgba(231,194,125,.07);}
+.etq{display:inline-block;font-weight:800;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:3px 7px;background:rgba(246,240,230,.1);}
+.etq.ok{background:rgba(47,138,67,.35);} .etq.no{background:rgba(217,83,79,.3);}
+/* puerta */
+.selector{display:flex;gap:8px;justify-content:center;margin:6px 0 14px;flex-wrap:wrap;}
+.selector button{flex:1;min-width:120px;max-width:220px;font:800 15px var(--f-texto);padding:14px;border-radius:14px;cursor:pointer;border:2px solid rgba(246,240,230,.2);background:transparent;color:var(--crema);}
+.selector button.activa{border-color:var(--oro);background:rgba(231,194,125,.14);color:var(--oro-vivo);}
+#reader{width:100%;max-width:380px;margin:0 auto;border-radius:16px;overflow:hidden;}
+.resultado{max-width:380px;margin:14px auto;border-radius:18px;padding:22px;text-align:center;color:#fff;display:none;}
+.resultado.ok{background:#15803d;} .resultado.err{background:#b91c1c;} .resultado.warn{background:#c2410c;}
+.resultado .grande{font-family:var(--f-texto);font-weight:800;font-size:34px;line-height:1.05;text-transform:uppercase;}
+.resultado .detalle{font-weight:700;margin-top:6px;}
+.contador{text-align:center;color:var(--gris);font-size:14px;margin:10px 0;} .contador b{color:var(--oro-vivo);}
+.puerta-ev{text-align:center;font-family:var(--f-display);font-size:24px;margin-bottom:6px;}
+/* modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(8,6,16,.82);z-index:50;align-items:center;justify-content:center;padding:14px;}
+.modal.abierto{display:flex;}
+.modal-caja{background:var(--noche-2);border:1px solid rgba(231,194,125,.25);border-radius:18px;max-width:680px;width:100%;max-height:92vh;overflow:auto;padding:20px;}
+.qr-mini{display:inline-block;background:#fff;border-radius:12px;padding:8px;margin:6px;text-align:center;color:#1d1830;font-weight:700;font-size:12px;}
+.qr-mini img{display:block;width:170px;height:170px;}
+.fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.fila input{flex:1;min-width:180px;}
+.ok-msg{color:#86efac;font-size:13px;} .err-msg{color:#fca5a5;font-size:13px;}
+.login{max-width:380px;margin:30px auto;}
+.login img{display:block;width:130px;height:130px;margin:0 auto 10px;border-radius:50%;object-fit:cover;background:#fff;}
+.sandbox{background:#7c2d12;color:#ffedd5;border-radius:12px;padding:8px 12px;font-size:12.5px;font-weight:700;margin-bottom:12px;}
+.enlace{word-break:break-all;font-size:12.5px;background:rgba(0,0,0,.3);border-radius:10px;padding:10px;margin-top:10px;}
+/* cartelera */
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.tipo-fila{display:grid;grid-template-columns:1.4fr 1.2fr .8fr .7fr auto;gap:6px;align-items:end;margin-top:8px;}
+.tipo-fila input{font-size:14px;padding:10px;}
+.tipo-fila label{font-size:11px;margin:0 0 3px;}
+textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf3;border:2px solid transparent;border-radius:12px;padding:12px;outline:none;min-height:80px;}
+.check{display:flex;gap:8px;align-items:center;font-weight:700;margin-top:12px;cursor:pointer;}
+.check input{width:auto;}
+.mini-foto{width:70px;height:88px;object-fit:cover;border-radius:10px;vertical-align:middle;}
+@media (max-width:600px){.tipo-fila{grid-template-columns:1fr 1fr;} .dos{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<main class="marco">
+
+  <!-- ══ Ingreso ══ -->
+  <section id="v-login" class="login" hidden>
+    <img src="assets/logo.webp" width="130" height="130" alt="">
+    <h1 class="centro" style="font-size:28px;">Panel de <em>entradas</em></h1>
+    <p class="centro bajada" data-sitio="nombre"></p>
+    <form class="tarjeta" id="f-login">
+      <label for="l-user">Usuario</label><input id="l-user" autocomplete="username" autocapitalize="off">
+      <label for="l-pass">Clave</label><input id="l-pass" type="password" autocomplete="current-password">
+      <div class="error" id="l-err"></div>
+      <button class="btn" type="submit" style="margin-top:16px;">Ingresar</button>
+    </form>
+  </section>
+
+  <!-- ══ Panel ══ -->
+  <section id="v-panel" hidden>
+    <div class="barra">
+      <a class="cabeza" href="/" style="padding:0;"><img src="assets/logo.webp" width="46" height="46" alt="">
+        <span><small id="rol-txt">Panel</small><b data-sitio="nombre">Entradas</b></span></a>
+      <div class="fila"><span class="quien" id="quien"></span><button class="chico" onclick="salir()">Salir</button></div>
+    </div>
+    <div class="sandbox" id="aviso-sandbox" hidden>Chytapay en modo PRUEBA: los pagos no son reales.</div>
+    <nav class="tabs" id="tabs"></nav>
+    <div class="selevento" id="caja-sel"><label for="sel-evento">Fecha</label><select id="sel-evento"></select></div>
+
+    <!-- Resumen -->
+    <div class="vista" id="t-resumen">
+      <div class="fila" style="justify-content:space-between;">
+        <h2 style="font-family:var(--f-display);font-size:26px;" id="r-titulo">Resumen</h2>
+        <button class="chico" onclick="cargarResumen()">Actualizar</button>
+      </div>
+      <p class="ayuda" id="r-estado"></p>
+      <div class="noches" id="r-tipos" style="margin-top:10px;"></div>
+      <div class="cifras" id="r-cifras"></div>
+      <p class="ayuda" id="r-cobro" style="margin-top:12px;"></p>
+      <!-- Todo se cobra por transferencia (Chytapay): no hay desglose por medio de pago. Sí por etapa de precio y por día. -->
+      <h3 class="paso" style="margin-top:22px;">Por etapa de precio</h3>
+      <div class="tabla"><table><thead><tr><th>Etapa</th><th class="n">Precio</th><th class="n">Entradas</th><th class="n">Cobrado</th><th class="n col-org">Para el organizador</th></tr></thead><tbody id="r-precios"></tbody></table></div>
+      <h3 class="paso" style="margin-top:22px;">Por día</h3>
+      <p class="ayuda">Cada compra entra en el momento a la cuenta de Chytapay: con esta tabla se cruza con los movimientos de la cuenta.</p>
+      <div class="tabla"><table><thead><tr><th>Día</th><th class="n">Compras</th><th class="n">Entradas</th><th style="width:30%"></th><th class="n">Cobrado</th><th class="n col-org">Para el organizador</th></tr></thead><tbody id="r-dias"></tbody></table></div>
+      <div id="r-caja-puntos" hidden>
+        <h3 class="paso" style="margin-top:22px;">Puntos de venta</h3>
+        <div class="tabla"><table><thead><tr><th>Punto</th><th class="n">Ventas</th><th class="n">Entradas</th><th class="n">Cobrado</th><th class="n">Para el organizador</th><th class="n">Servicio</th></tr></thead><tbody id="r-puntos"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Ventas / Buscar -->
+    <div class="vista" id="t-ventas">
+      <div class="filtros" id="v-filtros" hidden></div>
+      <div class="fila"><input id="buscar" placeholder="Buscar por DNI, email, nombre o número de compra (en todas las fechas)" autocomplete="off">
+        <button class="chico oro" onclick="buscar()">Buscar</button></div>
+      <p class="ayuda" id="ventas-titulo" style="margin-top:8px;"></p>
+      <div class="tabla"><table><thead id="v-cabeza"></thead><tbody id="v-filas"></tbody></table></div>
+    </div>
+
+    <!-- Cartelera -->
+    <div class="vista" id="t-cartelera">
+      <div class="fila" style="justify-content:space-between;">
+        <h2 style="font-family:var(--f-display);font-size:26px;">Cartelera</h2>
+        <button class="chico oro" onclick="editarEvento(null)">+ Nueva fecha</button>
+      </div>
+      <p class="ayuda">Cada fecha con sus entradas. "Publicada" = se ve en la página. "Venta abierta" = se puede comprar online (en la boletería se vende igual).
+        <span id="ayuda-precio">El precio es lo que recibe el organizador: el comprador ve ese precio + el servicio, como un solo número.</span> La capacidad no se muestra en la página.</p>
+      <div class="tabla"><table><thead><tr><th></th><th>Fecha</th><th>Evento</th><th>Estado</th><th class="n">Vendidas</th><th class="n">Para el organizador</th><th></th></tr></thead><tbody id="ev-filas"></tbody></table></div>
+    </div>
+
+    <!-- Puerta -->
+    <div class="vista" id="t-puerta">
+      <p class="puerta-ev" id="puerta-ev"></p>
+      <div id="puerta-tipos" hidden>
+        <p class="centro paso" style="justify-content:center;">¿Qué entradas estás controlando?</p>
+        <div class="selector" id="sel-puerta"></div>
+      </div>
+      <div class="centro">
+        <button class="btn" id="b-camara" onclick="abrirCamara()" style="max-width:380px;">Abrir la cámara</button>
+        <p style="margin-top:10px;"><button class="chico" onclick="probarSonido()">Probar el sonido</button></p>
+      </div>
+      <div id="zona-scan" hidden>
+        <div id="reader"></div>
+        <div class="resultado" id="res"><div class="grande" id="res-tit"></div><div class="detalle" id="res-det"></div>
+          <button class="btn" onclick="siguiente()" style="margin-top:14px;background:#fff;">Escanear el siguiente</button></div>
+        <div class="contador">Ingresaron <b id="ingresados">0</b> en este celular</div>
+        <div class="fila" style="max-width:380px;margin:0 auto;"><input id="codigo-manual" placeholder="…o pegá el código del QR"><button class="chico oro" onclick="validarManual()">Validar</button></div>
+        <p class="centro" style="margin-top:12px;"><button class="chico" onclick="cerrarCamara()">Cerrar la cámara</button></p>
+      </div>
+    </div>
+
+    <!-- Punto de venta -->
+    <div class="vista" id="t-punto">
+      <form class="tarjeta" id="f-punto" style="margin-top:0;">
+        <p class="paso"><span>1</span>Venta en el punto</p>
+        <div class="selector" id="p-tipos"></div>
+        <div class="dos">
+          <div><label for="p-cant">Cantidad</label><input id="p-cant" type="number" min="1" max="20" value="1"></div>
+          <div><label for="p-cobro">Cobro</label><select id="p-cobro"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select></div>
+        </div>
+        <label for="p-nombre">Nombre y apellido</label><input id="p-nombre" autocomplete="off">
+        <label for="p-email">Email (ahí le llegan las entradas)</label><input id="p-email" type="email" autocapitalize="off" autocomplete="off">
+        <label for="p-dni">DNI</label><input id="p-dni" inputmode="numeric" maxlength="9" autocomplete="off">
+        <div class="aviso" id="p-total" style="margin-top:14px;"></div>
+        <div class="error" id="p-err"></div>
+        <button class="btn" type="submit" style="margin-top:14px;">Cobrar y emitir</button>
+      </form>
+      <section class="tarjeta">
+        <div class="fila" style="justify-content:space-between;"><p class="paso" style="margin:0;">Mi liquidación</p><button class="chico" onclick="cargarMisVentas()">Actualizar</button></div>
+        <div class="cifras" id="mv-cifras"></div>
+        <div class="tabla"><table><thead><tr><th>Cuándo</th><th>Fecha</th><th>Entrada</th><th>Nombre</th><th class="n">Cant.</th><th>Cobro</th><th class="n">Total</th></tr></thead><tbody id="mv-filas"></tbody></table></div>
+      </section>
+    </div>
+
+    <!-- Herramientas -->
+    <div class="vista" id="t-herramientas">
+      <section class="tarjeta solo-admin" style="margin-top:0;" id="caja-chytapay">
+        <p class="paso">Cobro online: Chytapay</p>
+        <div id="cy-estado" class="ayuda">Consultando…</div>
+        <button class="chico oro" onclick="conectarChytapay()" style="margin-top:10px;" id="cy-boton">Generar enlace para conectar la cuenta del organizador</button>
+        <div id="cy-enlace"></div>
+      </section>
+      <section class="tarjeta">
+        <p class="paso">Planilla</p>
+        <button class="chico" onclick="exportar(true)">Ventas de la fecha elegida (CSV)</button>
+        <button class="chico" onclick="exportar(false)">Ventas de todas las fechas (CSV)</button>
+      </section>
+      <section class="tarjeta">
+        <div class="fila" style="justify-content:space-between;"><p class="paso" style="margin:0;">Transferencias sin asignar</p><button class="chico" onclick="cargarSinImputar()">Actualizar</button></div>
+        <p class="ayuda">Plata que entró a la cuenta del organizador pero no se pudo asignar sola a una compra (pagó otra persona, pagó tarde o pagó dos veces).
+          Se asigna desde la cuenta de Chytapay a la compra que corresponde, y ahí se emiten las entradas solas.</p>
+        <div class="tabla"><table><thead><tr><th>Fecha</th><th class="n">Monto</th><th>Quién pagó</th><th>Motivo</th><th>Compra</th><th></th></tr></thead><tbody id="si-filas"></tbody></table></div>
+      </section>
+      <section class="tarjeta solo-admin">
+        <p class="paso">Cortesía (para la fecha elegida)</p>
+        <p class="ayuda">Entrada sin cargo: ocupa lugar en el cupo y le llega al mail como cualquier otra.</p>
+        <div class="selector" id="c-tipos" style="margin-top:10px;"></div>
+        <div class="fila"><input id="c-nombre" placeholder="Nombre"><input id="c-email" placeholder="Email" type="email"><input id="c-cant" type="number" min="1" max="20" value="1" style="max-width:90px;flex:0 0 90px;"></div>
+        <button class="chico oro" onclick="cortesia()" style="margin-top:10px;">Emitir cortesía</button> <span id="c-msg"></span>
+      </section>
+      <section class="tarjeta solo-admin">
+        <p class="paso">Pruebas</p>
+        <button class="chico" onclick="prueba()">Generar entrada de prueba (fecha elegida)</button>
+        <button class="chico" onclick="repescar()">Revisar pagos pendientes ahora</button>
+        <div id="prueba-qrs" style="margin-top:10px;"></div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<!-- QR de una compra -->
+<div class="modal" id="m-qr" onclick="if(event.target===this)cerrarModal('m-qr')">
+  <div class="modal-caja">
+    <p class="paso" id="mq-tit"></p>
+    <p class="ayuda" id="mq-sub"></p>
+    <div id="mq-qrs" class="centro" style="margin-top:8px;"></div>
+    <div class="fila" style="margin-top:14px;" id="mq-ingreso"><button class="chico oro" onclick="ingresoManual()">Marcar ingreso de toda la compra</button><span id="mq-ing-msg"></span></div>
+    <p class="ayuda puede-reenviar" style="margin-top:14px;">¿Puso mal el email? Reenviá las entradas al correcto:</p>
+    <div class="fila puede-reenviar"><input id="mq-email" type="email" placeholder="email correcto"><button class="chico" onclick="reenviar()">Reenviar</button></div>
+    <div id="mq-msg" style="margin-top:6px;"></div>
+    <p class="centro" style="margin-top:14px;"><button class="chico" onclick="cerrarModal('m-qr')">Cerrar</button></p>
+  </div>
+</div>
+
+<!-- Editar / crear una fecha -->
+<div class="modal" id="m-ev" onclick="if(event.target===this)cerrarModal('m-ev')">
+  <form class="modal-caja" id="f-ev" novalidate>
+    <p class="paso" id="ev-tit">Nueva fecha</p>
+    <label for="ev-nombre">Nombre del evento</label><input id="ev-nombre" placeholder="Fiesta del Violinero">
+    <label for="ev-sub">Bajada (opcional)</label><input id="ev-sub" placeholder="6° aniversario, 20 años, La vuelta…">
+    <div class="dos">
+      <div><label for="ev-fecha">Fecha</label><input id="ev-fecha" type="date"></div>
+      <div><label for="ev-hora">Hora (vacío = a confirmar)</label><input id="ev-hora" placeholder="21:30"></div>
+    </div>
+    <label for="ev-puertas">Apertura de puertas (opcional)</label><input id="ev-puertas" placeholder="21 h">
+    <label for="ev-artistas">Artistas (uno por renglón; el principal primero)</label><textarea id="ev-artistas"></textarea>
+    <label for="ev-desc">Descripción (opcional: aparece en "Ver más"; un párrafo por renglón)</label><textarea id="ev-desc"></textarea>
+    <label for="ev-nota">Nota en la tarjeta (opcional)</label><input id="ev-nota" placeholder="Cartelera a confirmar">
+    <details style="margin-top:12px;"><summary style="cursor:pointer;font-weight:700;">¿La vende otra ticketera?</summary>
+      <p class="ayuda">Se muestra igual en la cartelera, con un botón a la venta de ellos. Esa fecha no lleva entradas propias.</p>
+      <label for="ev-ext-url">Enlace a su venta (https://…)</label><input id="ev-ext-url" placeholder="https://">
+      <div class="dos">
+        <div><label for="ev-ext-texto">Texto del botón</label><input id="ev-ext-texto" placeholder="Entradas en …"></div>
+        <div><label for="ev-ext-precio">Precio informativo</label><input id="ev-ext-precio" placeholder="Anticipadas $10.000"></div>
+      </div>
+    </details>
+    <p class="paso" style="margin-top:16px;">Entradas</p>
+    <p class="ayuda">Precio = lo que recibe el organizador por entrada. Capacidad = cuántas se venden de ese tipo (no se muestra en la página). Sin entradas cargadas, la fecha se ve como "Entradas muy pronto".</p>
+    <div id="ev-tipos"></div>
+    <button type="button" class="chico" onclick="filaTipo()" style="margin-top:8px;">+ Tipo de entrada</button>
+    <label class="check"><input type="checkbox" id="ev-pub"> Publicada (se ve en la página)</label>
+    <label class="check"><input type="checkbox" id="ev-venta"> Venta online abierta</label>
+    <label for="ev-foto" style="margin-top:16px;">Foto o flyer (vertical, se recorta 4:5)</label>
+    <div class="fila"><img id="ev-foto-vista" class="mini-foto" alt="" hidden><input id="ev-foto" type="file" accept="image/jpeg,image/png,image/webp" style="background:transparent;color:var(--crema);"></div>
+    <div class="error" id="ev-err"></div>
+    <div class="fila" style="margin-top:16px;justify-content:space-between;">
+      <button type="button" class="chico rojo" id="ev-borrar" onclick="borrarEvento()" hidden>Borrar fecha</button>
+      <span class="fila"><button type="button" class="chico" onclick="cerrarModal('m-ev')">Cancelar</button><button type="submit" class="chico oro" id="ev-guardar">Guardar</button></span>
+    </div>
+  </form>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="cabeza.js"></script>
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const pesos = n => '$' + Math.round(Number(n || 0)).toLocaleString('es-AR');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fecha = f => new Date(f).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+const fCorta = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '';
+const MOTIVO = { expired: 'Pagó después de vencer', already_paid: 'Pagó dos veces', canceled: 'Compra cancelada', no_cuil_match: 'Pagó otra persona', no_pending: 'Sin compra abierta', ambiguous: 'Más de una compra posible' };
+let S = JSON.parse(localStorage.getItem('gala_sesion') || 'null');
+let PUERTA = '';                    // tipo que controla la puerta ('' = todos)
+let CFG = null, EVA = localStorage.getItem('gala_evento') || null, P_TIPO = null, C_TIPO = null;
+const evElegido = () => CFG?.eventos.find(e => e.id === EVA) || null;
+const etq = t => `<span class="etq">${esc(t)}</span>`;
+
+async function api(url, opciones = {}) {
+  const r = await fetch(url, { ...opciones, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (S?.token || ''), ...(opciones.headers || {}) } });
+  if (r.status === 401) { salir(); throw new Error('La sesión venció: volvé a ingresar.'); }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || d.msg || 'Error');
+  return d;
+}
+
+// ── Ingreso ──
+$('#f-login').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const e = $('#l-err'); e.style.display = 'none';
+  try {
+    const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario: $('#l-user').value.trim(), password: $('#l-pass').value }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'No se pudo ingresar');
+    S = d; localStorage.setItem('gala_sesion', JSON.stringify(d));
+    armar();
+  } catch (x) { e.textContent = x.message; e.style.display = 'block'; }
+});
+function salir() { localStorage.removeItem('gala_sesion'); S = null; cerrarCamara(); location.href = '/admin'; }
+
+// ── Pestañas según el rol ──
+const PESTANAS = {
+  admin: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['punto', 'Punto de venta'], ['herramientas', 'Herramientas']],
+  // El organizador: ve todo y carga la cartelera; no vende ni emite (sin "Punto de venta", ni cortesías, ni pruebas).
+  // En una gala de una sola fecha tampoco ve la cartelera (los precios y las etapas los carga José en la ficha).
+  organizador: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['herramientas', 'Planilla y pagos']],
+  control: [['puerta', 'Puerta'], ['ventas', 'Buscar']],
+  venta: [['punto', 'Vender'], ['ventas', 'Buscar']],
+};
+const ES_ADMIN = () => S.rol === 'admin';
+const VE_TODO = () => ['admin', 'organizador'].includes(S.rol);
+const PUEDE_REENVIAR = () => ['admin', 'venta', 'organizador'].includes(S.rol);   // el organizador también (es su evento)
+let PEST = null;
+async function cargarCfg() {
+  CFG = await api('/api/admin/config');
+  if (!evElegido()) EVA = CFG.actual || CFG.eventos[0]?.id || null;
+  $('#sel-evento').innerHTML = CFG.eventos.map(e => `<option value="${esc(e.id)}"${e.id === EVA ? ' selected' : ''}>${fCorta(e.fecha)} · ${esc(e.nombre)}${e.pasado ? ' (pasada)' : ''}</option>`).join('')
+    || '<option value="">Todavía no hay fechas: cargalas en Cartelera</option>';
+  if (CFG.sandbox) $('#aviso-sandbox').hidden = false;
+  if (CFG.precioIncluyeCargo) $('#ayuda-precio').textContent = 'El precio es el FINAL, lo que paga el público (el servicio va adentro: el organizador recibe el precio ÷ 1,10).';
+  pintarSelectores();
+}
+$('#sel-evento').addEventListener('change', e => { EVA = e.target.value; localStorage.setItem('gala_evento', EVA); PUERTA = ''; pintarSelectores(); abrir(PEST); });
+async function armar() {
+  $('#v-login').hidden = true; $('#v-panel').hidden = false;
+  $('#quien').textContent = S.nombre || S.usuario;
+  $('#rol-txt').textContent = { admin: 'Administración', organizador: 'Organización', control: 'Puerta', venta: 'Punto de venta' }[S.rol];
+  $$('.solo-admin').forEach(e => e.hidden = !ES_ADMIN());
+  $$('.puede-reenviar').forEach(e => e.hidden = !PUEDE_REENVIAR());
+  $('#tabs').innerHTML = PESTANAS[S.rol].map(([k, t]) => `<button data-t="${k}">${t}</button>`).join('');
+  $$('#tabs button').forEach(b => b.onclick = () => abrir(b.dataset.t));
+  try { await cargarCfg(); } catch (e) { alert(e.message); }
+  if (CFG?.modo === 'gala' && S.rol === 'organizador') $('#tabs [data-t="cartelera"]')?.remove();
+  abrir(PESTANAS[S.rol][0][0]);
+  avisoChytapay();
+}
+function abrir(t) {
+  PEST = t;
+  $$('#tabs button').forEach(b => b.classList.toggle('activa', b.dataset.t === t));
+  $$('.vista').forEach(v => v.classList.toggle('activa', v.id === 't-' + t));
+  // El selector de fecha no hace falta en la cartelera ni en la búsqueda
+  $('#caja-sel').hidden = ['cartelera'].includes(t) || (t === 'ventas' && !VE_TODO()) || (CFG?.eventos.length || 0) <= 1;
+  if (t !== 'puerta') cerrarCamara();
+  if (t === 'resumen') cargarResumen();
+  $('#v-filtros').hidden = !VE_TODO();
+  if (t === 'ventas' && VE_TODO() && !$('#buscar').value) cargarOperaciones();
+  if (t === 'cartelera') cargarCartelera();
+  if (t === 'puerta') pintarPuerta();
+  if (t === 'punto') cargarMisVentas();
+  if (t === 'herramientas') { cargarSinImputar(); if (ES_ADMIN()) estadoChytapay(); }
+}
+
+// ── Resumen (de la fecha elegida) ──
+let ULTIMAS = [];
+async function cargarResumen() {
+  if (!EVA) { $('#r-titulo').textContent = 'Resumen'; $('#r-estado').textContent = 'Todavía no hay fechas en la cartelera.'; return; }
+  try {
+    const d = await api('/api/admin/resumen?evento=' + encodeURIComponent(EVA));
+    if (!d.evento) return;
+    $('#r-titulo').textContent = d.evento.nombre;
+    $('#r-estado').innerHTML = `${esc(d.evento.cuando)} · ${d.evento.publicado ? '<span class="etq ok">publicada</span>' : '<span class="etq no">oculta</span>'} ${d.evento.ventaAbierta ? '<span class="etq ok">venta online abierta</span>' : '<span class="etq no">venta online cerrada</span>'}`;
+    const ORG = S.rol === 'organizador' ? 'Para vos' : 'Para el organizador';
+    $$('.col-org').forEach(th => th.textContent = ORG);
+    $('#r-tipos').innerHTML = Object.entries(d.tipos).map(([k, n]) => {
+      const v = n.vendidas / n.cupo * 100, r = n.reservadas / n.cupo * 100;
+      // Sin tope de venta: ni barra ni "libres" (serían 99.000 y pico).
+      if (n.sinTope) return `<div class="noche"><h3>${esc(n.nombre)}</h3>
+        <p style="font-size:14px;margin-top:6px;"><b style="font-size:26px">${n.vendidas.toLocaleString('es-AR')}</b> vendidas · sin tope de venta</p>
+        <p class="ayuda">${n.reservadas} entrada${n.reservadas === 1 ? '' : 's'} en proceso de pago · ingresaron ${n.ingresaron.toLocaleString('es-AR')}</p></div>`;
+      return `<div class="noche"><h3>${esc(n.nombre)}</h3>
+        <div class="barra-cupo"><i style="width:${v}%;background:var(--oro)"></i><i style="width:${r}%;background:rgba(231,194,125,.4)"></i></div>
+        <p style="font-size:14px;"><b style="font-size:20px">${n.vendidas.toLocaleString('es-AR')}</b> de ${n.cupo.toLocaleString('es-AR')} vendidas · <b>${n.libres.toLocaleString('es-AR')}</b> libres</p>
+        <p class="ayuda">${n.reservadas} pagando ahora · ingresaron ${n.ingresaron.toLocaleString('es-AR')}</p></div>`;
+    }).join('') || '<p class="ayuda">Esta fecha todavía no tiene entradas cargadas (Cartelera → Editar).</p>';
+    const cifra = ([b, s, clase = '', ir = '']) => `<div class="cifra ${clase}"${ir ? ` style="cursor:pointer" onclick="${ir}"` : ''}><b>${b}</b><span>${s}</span></div>`;
+    $('#r-cifras').innerHTML = [
+      [d.entradas.toLocaleString('es-AR'), 'Entradas vendidas', 'fuerte'], [d.ordenes, 'Compras'],
+      [pesos(d.cobrado), 'Cobrado (lo que pagó el público)'], [pesos(d.recaudado), `${ORG} (sin el servicio)`, 'fuerte'],
+      [d.pendientes, 'Compras pagando ahora', '', "abrirOperaciones('pagando')"],
+      ...(d.intentos ? [[d.intentos, 'Compras que no se pagaron: ver', '', "abrirOperaciones('sinpagar')"]] : []),
+      ...(d.cortesias ? [[d.cortesias, 'Cortesías']] : []),
+      [d.visitas.hoy + ' / ' + d.visitas.total, 'Visitas a la página hoy / total'],
+      ...(d.sinImputar ? [[d.sinImputar, 'Transferencias sin asignar: ver', 'alerta', "abrir('herramientas')"]] : []),
+    ].map(cifra).join('');
+    $('#r-cobro').textContent = d.cobrado
+      ? `Todo se cobra por transferencia a la cuenta de Chytapay del organizador. De lo cobrado (${pesos(d.cobrado)}), ${pesos(d.cargo)} son el servicio de la plataforma, que Chytapay separa solo en cada pago.`
+      : '';
+    $('#r-precios').innerHTML = d.porPrecio.map(p => `<tr><td>${esc(p.nombre || '—')}</td><td class="n">${pesos(p.precio)}</td><td class="n">${p.entradas}</td><td class="n">${pesos(p.cobrado)}</td><td class="n">${pesos(p.paraOrganizador)}</td></tr>`).join('')
+      || '<tr><td colspan="5" class="ayuda">Todavía no hay ventas para esta fecha.</td></tr>';
+    const maxDia = Math.max(1, ...d.porDia.map(x => x.entradas));
+    $('#r-dias').innerHTML = d.porDia.map(x => `<tr><td>${['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'][new Date(x.dia + 'T12:00:00Z').getUTCDay()]} ${fCorta(x.dia)}</td>
+      <td class="n">${x.compras}</td><td class="n">${x.entradas}</td><td><div class="dia-barra" style="width:${x.entradas / maxDia * 100}%"></div></td>
+      <td class="n">${pesos(x.cobrado)}</td><td class="n">${pesos(x.paraOrganizador)}</td></tr>`).join('')
+      || '<tr><td colspan="6" class="ayuda">Todavía no hay ventas para esta fecha.</td></tr>';
+    $('#r-caja-puntos').hidden = !d.porPunto.length;
+    $('#r-puntos').innerHTML = d.porPunto.map(p => `<tr><td>${esc(p.vendedor)}</td><td class="n">${p.operaciones}</td><td class="n">${p.entradas}</td><td class="n">${pesos(p.total)}</td><td class="n">${pesos(p.subtotal)}</td><td class="n">${pesos(p.cargo)}</td></tr>`).join('');
+    ULTIMAS = d.ultimas;
+  } catch (x) { alert(x.message); }
+}
+// Estado de una compra en la lista (las de la búsqueda vienen sin estadoVista: son pagadas o devueltas).
+const ESTADOS = { pagada: ['pagada', 'ok'], pagando: ['pagando ahora', 'pagando'], sinpagar: ['no pagó', 'no'], devuelta: ['devuelta', 'no'], cortesia: ['cortesía', ''] };
+const estadoDe = o => o.estadoVista || (o.estado === 'reversada' ? 'devuelta' : o.metodo === 'cortesia' ? 'cortesia' : 'pagada');
+function pintarVentas(lista, titulo) {
+  $('#ventas-titulo').textContent = titulo;
+  window._lista = lista;
+  // Columnas que solo sirven con varias fechas o varios tipos de entrada; "Pagó desde" = quién transfirió (Chytapay).
+  const variasFechas = (CFG?.eventos.length || 0) > 1, variosTipos = new Set(lista.map(o => o.tipoNombre)).size > 1;
+  $('#v-cabeza').innerHTML = `<tr><th>Compra</th>${variasFechas ? '<th>Fecha</th>' : ''}${variosTipos ? '<th>Entrada</th>' : ''}<th>Nombre</th><th>DNI</th>
+    <th class="n">Cant.</th><th class="n">Total</th><th>Pagó desde</th><th>Estado</th><th>Ingresó</th></tr>`;
+  $('#v-filas').innerHTML = lista.map((o, i) => {
+    const e = estadoDe(o), [txt, clase] = ESTADOS[e];
+    const desde = o.metodo === 'punto' ? 'punto: ' + o.vendedor : o.metodo === 'cortesia' ? '—' : (o.pagador || (e === 'pagada' ? 'transferencia' : '—'));
+    return `<tr class="click" onclick="verOrden(${i})"><td>${fecha(e === 'pagada' ? o.fecha : o.creada || o.fecha)}</td>${variasFechas ? `<td>${fCorta(o.eventoFecha)}</td>` : ''}${variosTipos ? `<td>${etq(o.tipoNombre)}</td>` : ''}
+      <td>${esc(o.nombre)}</td><td>${esc(o.dni || '')}</td><td class="n">${o.cantidad}</td><td class="n">${pesos(o.total)}</td><td>${esc(desde)}</td>
+      <td><span class="etq ${clase}">${txt}</span></td><td>${['pagada', 'cortesia'].includes(e) ? `${o.ingresadas}/${o.cantidad}` : ''}</td></tr>`;
+  }).join('') || '<tr><td colspan="10" class="ayuda">Sin resultados.</td></tr>';
+}
+// Operaciones de la fecha elegida, filtradas por estado (con la cantidad de cada uno en los botones).
+let FILTRO = 'pagada';
+const FILTROS = [['pagada', 'Pagadas'], ['pagando', 'Pagando ahora'], ['sinpagar', 'No pagaron'], ['devuelta', 'Devueltas'], ['cortesia', 'Cortesías'], ['todas', 'Todas']];
+async function cargarOperaciones() {
+  if (!EVA) return;
+  try {
+    const d = await api(`/api/admin/operaciones?evento=${encodeURIComponent(EVA)}&estado=${FILTRO}`);
+    const total = Object.values(d.cuentas).reduce((a, b) => a + b, 0);
+    $('#v-filtros').innerHTML = FILTROS.filter(([k]) => k === FILTRO || k === 'todas' || k === 'pagada' || d.cuentas[k])
+      .map(([k, t]) => `<button class="${k === FILTRO ? 'activa' : ''}" onclick="abrirOperaciones('${k}')">${t}<b>${k === 'todas' ? total : d.cuentas[k]}</b></button>`).join('');
+    const ayuda = { sinpagar: ' · empezaron la compra y no transfirieron (o transfirieron tarde: mirá "Transferencias sin asignar")', pagando: ' · tienen el CVU y todavía están a tiempo de transferir' }[FILTRO] || '';
+    pintarVentas(d.ordenes, `${d.ordenes.length} ${FILTROS.find(f => f[0] === FILTRO)[1].toLowerCase()}${ayuda}`);
+  } catch (x) { alert(x.message); }
+}
+function abrirOperaciones(filtro) { FILTRO = filtro; $('#buscar').value = ''; if (PEST !== 'ventas') abrir('ventas'); else cargarOperaciones(); }
+async function buscar() {
+  const q = $('#buscar').value.trim();
+  if (q.length < 3) { if (VE_TODO()) cargarOperaciones(); return; }
+  try { const d = await api('/api/admin/buscar?q=' + encodeURIComponent(q)); pintarVentas(d.ordenes, `${d.ordenes.length} resultado(s) para "${q}" en todas las fechas`); } catch (x) { alert(x.message); }
+}
+$('#buscar').addEventListener('keydown', e => { if (e.key === 'Enter') buscar(); });
+
+// ── QR de una compra ──
+let ORDEN = null;
+async function verOrden(i) {
+  const o = window._lista[i]; ORDEN = o;
+  // Compra sin pagar: no hay QR ni reenvío; se muestran los datos para poder escribirle.
+  const pagada = ['pagada', 'cortesia', 'devuelta'].includes(estadoDe(o));
+  $('#mq-ingreso').hidden = !pagada || S.rol === 'venta';
+  $$('.puede-reenviar').forEach(e => e.hidden = !pagada || !PUEDE_REENVIAR());
+  $('#mq-msg').hidden = !pagada;
+  if (!pagada) {
+    $('#mq-tit').textContent = `${o.nombre} · ${o.cantidad} entrada${o.cantidad > 1 ? 's' : ''} · ${pesos(o.total)}`;
+    $('#mq-sub').textContent = `${ESTADOS[estadoDe(o)][0]} · empezó la compra el ${fecha(o.creada || o.fecha)} · DNI ${o.dni || '—'}`;
+    $('#mq-qrs').innerHTML = `<p class="ayuda" style="text-align:left">${estadoDe(o) === 'pagando' ? 'Todavía está a tiempo de transferir: si paga, la entrada sale sola.' : 'No llegó a pagar dentro de la reserva. Si dice que transfirió, buscalo en "Transferencias sin asignar".'}</p>
+      <p style="margin-top:10px;text-align:left"><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></p>`;
+    $('#m-qr').classList.add('abierto');
+    return;
+  }
+  try {
+    const d = await api('/api/admin/orden/' + encodeURIComponent(o.id) + '/qrs');
+    $('#mq-tit').textContent = `${d.eventoNombre} · ${d.tipoNombre} · ${d.cantidad}`;
+    $('#mq-sub').textContent = `${d.cuando} · ${d.nombre} · ${d.email} · DNI ${d.dni || '—'}${o.pagador ? ' · pagó: ' + o.pagador : ''}`;
+    $('#mq-qrs').innerHTML = d.qrs.map(q => `<div class="qr-mini"><img src="${esc(q.url)}" alt="">${q.indice} de ${d.cantidad}${q.usado ? ' · ya entró' : ''}</div>`).join('');
+    $('#mq-email').value = d.email; $('#mq-msg').innerHTML = ''; $('#mq-ing-msg').innerHTML = '';
+    $('#m-qr').classList.add('abierto');
+  } catch (x) { alert(x.message); }
+}
+function cerrarModal(id) { $('#' + id).classList.remove('abierto'); }
+async function reenviar() {
+  try { const d = await api(`/api/admin/orden/${encodeURIComponent(ORDEN.id)}/reenviar`, { method: 'POST', body: JSON.stringify({ email: $('#mq-email').value.trim() }) });
+    $('#mq-msg').innerHTML = `<span class="ok-msg">Enviadas ${d.cantidad} a ${esc(d.email)}.</span>`; }
+  catch (x) { $('#mq-msg').innerHTML = `<span class="err-msg">${esc(x.message)}</span>`; }
+}
+async function ingresoManual() {
+  try { const d = await api(`/api/admin/orden/${encodeURIComponent(ORDEN.id)}/ingresar`, { method: 'POST', body: JSON.stringify({ evento: EVA }) });
+    $('#mq-ing-msg').innerHTML = `<span class="ok-msg">Marcadas ${d.marcadas} de ${d.total}.</span>`; }
+  catch (x) { $('#mq-ing-msg').innerHTML = `<span class="err-msg">${esc(x.message)}</span>`; }
+}
+
+// ── Cartelera ──
+let CARTELERA = [], EDITANDO = null;
+async function cargarCartelera() {
+  try {
+    const d = await api('/api/admin/eventos'); CARTELERA = d.eventos;
+    $('#ev-filas').innerHTML = CARTELERA.map((e, i) => `<tr${e.pasado ? ' style="opacity:.55"' : ''}>
+      <td>${e.imagen ? `<img class="mini-foto" style="width:44px;height:55px" src="${esc(e.imagen)}" alt="">` : ''}</td>
+      <td>${esc(e.cuando)}${e.hora ? '' : ' · <span class="ayuda">hora a confirmar</span>'}</td><td><b>${esc(e.nombre)}</b>${e.artistas?.length ? `<br><span class="ayuda">${esc(e.artistas.join(', '))}</span>` : ''}</td>
+      <td>${e.pasado ? '<span class="etq">pasada</span>' : `${e.publicado ? '<span class="etq ok">publicada</span>' : '<span class="etq no">oculta</span>'} ${e.externoUrl || e.externoPrecio || e.externoTexto ? '<span class="etq">otra ticketera</span>' : e.vendible ? '<span class="etq ok">a la venta</span>' : `<span class="etq no">${e.tipos.length ? 'venta cerrada' : 'sin precio'}</span>`}`}</td>
+      <td class="n">${e.vendidas}</td><td class="n">${pesos(e.recaudado)}</td>
+      <td><button class="chico" onclick="editarEvento(${i})">Editar</button></td></tr>`).join('')
+      || '<tr><td colspan="7" class="ayuda">Todavía no hay fechas. Tocá "+ Nueva fecha".</td></tr>';
+  } catch (x) { alert(x.message); }
+}
+function filaTipo(t = {}) {
+  const div = document.createElement('div'); div.className = 'tipo-fila';
+  div.innerHTML = `<div><label>Tipo</label><input class="t-nombre" placeholder="Entrada general" value="${esc(t.nombre || '')}"></div>
+    <div><label>Detalle (opcional)</label><input class="t-detalle" placeholder="Anticipada, mesa…" value="${esc(t.detalle || '')}"></div>
+    <div><label>Precio ($)</label><input class="t-precio" type="number" min="1" placeholder="15000" value="${t.precio ?? ''}"></div>
+    <div><label>Capacidad</label><input class="t-cupo" type="number" min="1" placeholder="2000" value="${t.cupo ?? ''}"></div>
+    <button type="button" class="chico rojo" title="Sacar">✕</button><input type="hidden" class="t-id" value="${esc(t.id || '')}">
+    ${t.etapas?.length ? `<p class="ayuda" style="grid-column:1/-1;margin:0;">Etapas: ${t.etapas.map(x => `hasta el ${fCorta(x.hasta)} ${pesos(x.precio)}`).join(' · ')} · después, el precio de arriba. Las etapas se cambian en la ficha (pedíselo a José).</p>` : ''}`;
+  div.querySelector('button').onclick = () => div.remove();
+  $('#ev-tipos').appendChild(div);
+}
+function editarEvento(i) {
+  const e = i == null ? null : CARTELERA[i]; EDITANDO = e;
+  $('#ev-tit').textContent = e ? 'Editar fecha' : 'Nueva fecha';
+  $('#ev-nombre').value = e?.nombre || ''; $('#ev-sub').value = e?.subtitulo || ''; $('#ev-fecha').value = e?.fecha || '';
+  $('#ev-hora').value = e?.hora || ''; $('#ev-puertas').value = e?.puertas || '';
+  $('#ev-artistas').value = (e?.artistas || []).join('\n'); $('#ev-desc').value = e?.descripcion || ''; $('#ev-nota').value = e?.nota || '';
+  $('#ev-ext-url').value = e?.externoUrl || ''; $('#ev-ext-texto').value = e?.externoTexto || ''; $('#ev-ext-precio').value = e?.externoPrecio || '';
+  $('#ev-ext-url').closest('details').open = Boolean(e?.externoUrl || e?.externoPrecio || e?.externoTexto);
+  $('#ev-tipos').innerHTML = ''; (e?.tipos || []).forEach(t => filaTipo(t)); if (!e?.tipos?.length) filaTipo();
+  $('#ev-pub').checked = e ? Boolean(Number(e.publicado)) : true; $('#ev-venta').checked = e ? Boolean(Number(e.ventaAbierta)) : true;
+  $('#ev-foto').value = ''; $('#ev-foto-vista').hidden = !e?.imagen; if (e?.imagen) $('#ev-foto-vista').src = e.imagen;
+  $('#ev-borrar').hidden = !e || e.vendidas > 0;
+  $('#ev-err').style.display = 'none';
+  $('#m-ev').classList.add('abierto');
+}
+$('#ev-foto').addEventListener('change', () => { const f = $('#ev-foto').files[0]; if (f) { $('#ev-foto-vista').src = URL.createObjectURL(f); $('#ev-foto-vista').hidden = false; } });
+// La foto se achica en el navegador (máximo 1600 px de lado, JPG) antes de subirla.
+function achicar(archivo) {
+  return new Promise((ok, mal) => {
+    const img = new Image();
+    img.onload = () => {
+      const max = 1600, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      ok(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = () => mal(new Error('No se pudo leer la foto'));
+    img.src = URL.createObjectURL(archivo);
+  });
+}
+$('#f-ev').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const err = $('#ev-err'); err.style.display = 'none';
+  const b = $('#ev-guardar'); b.disabled = true; b.textContent = 'Guardando…';
+  try {
+    const tipos = $$('#ev-tipos .tipo-fila').map(f => ({ id: f.querySelector('.t-id').value || undefined, nombre: f.querySelector('.t-nombre').value.trim(),
+      detalle: f.querySelector('.t-detalle').value.trim(), precio: Number(f.querySelector('.t-precio').value), cupo: Number(f.querySelector('.t-cupo').value) }))
+      .filter(t => t.nombre || t.precio || t.cupo);
+    const datos = { nombre: $('#ev-nombre').value, subtitulo: $('#ev-sub').value, fecha: $('#ev-fecha').value, hora: $('#ev-hora').value, puertas: $('#ev-puertas').value,
+      artistas: $('#ev-artistas').value, descripcion: $('#ev-desc').value, nota: $('#ev-nota').value, tipos, publicado: $('#ev-pub').checked, ventaAbierta: $('#ev-venta').checked,
+      externoUrl: $('#ev-ext-url').value.trim(), externoTexto: $('#ev-ext-texto').value, externoPrecio: $('#ev-ext-precio').value };
+    const d = EDITANDO ? await api('/api/admin/eventos/' + encodeURIComponent(EDITANDO.id), { method: 'PUT', body: JSON.stringify(datos) })
+                       : await api('/api/admin/eventos', { method: 'POST', body: JSON.stringify(datos) });
+    const archivo = $('#ev-foto').files[0];
+    if (archivo) { b.textContent = 'Subiendo la foto…'; await api(`/api/admin/eventos/${encodeURIComponent(d.id)}/imagen`, { method: 'POST', body: JSON.stringify({ tipo: 'image/jpeg', datos: await achicar(archivo) }) }); }
+    cerrarModal('m-ev'); await cargarCfg(); cargarCartelera();
+  } catch (x) { err.textContent = x.message; err.style.display = 'block'; }
+  b.disabled = false; b.textContent = 'Guardar';
+});
+async function borrarEvento() {
+  if (!EDITANDO || !confirm(`¿Borrar "${EDITANDO.nombre}"?`)) return;
+  try { await api('/api/admin/eventos/' + encodeURIComponent(EDITANDO.id), { method: 'DELETE' }); cerrarModal('m-ev'); await cargarCfg(); cargarCartelera(); }
+  catch (x) { $('#ev-err').textContent = x.message; $('#ev-err').style.display = 'block'; }
+}
+
+// ── Selectores de tipo (puerta, punto de venta y cortesía), de la fecha elegida ──
+function pintarSelectores() {
+  const ev = evElegido(), tipos = ev?.tipos || [];
+  if (!tipos.find(t => t.id === P_TIPO)) P_TIPO = tipos[0]?.id || null;
+  if (!tipos.find(t => t.id === C_TIPO)) C_TIPO = tipos[0]?.id || null;
+  const botones = actual => tipos.map(t => `<button type="button" data-tipo="${esc(t.id)}" class="${t.id === actual ? 'activa' : ''}">${esc(t.corto)}</button>`).join('') || '<p class="ayuda">Esta fecha no tiene entradas cargadas.</p>';
+  $('#p-tipos').innerHTML = botones(P_TIPO); $('#c-tipos').innerHTML = botones(C_TIPO);
+  $$('#p-tipos button').forEach(b => b.onclick = () => { P_TIPO = b.dataset.tipo; pintarSelectores(); });
+  $$('#c-tipos button').forEach(b => b.onclick = () => { C_TIPO = b.dataset.tipo; pintarSelectores(); });
+  pintarPuerta();
+  totalPunto();
+}
+function pintarPuerta() {
+  const ev = evElegido(), tipos = ev?.tipos || [];
+  $('#puerta-ev').textContent = ev ? `${ev.nombre} · ${fCorta(ev.fecha)}` : 'Elegí la fecha';
+  $('#puerta-tipos').hidden = tipos.length < 2;
+  if (PUERTA && !tipos.find(t => t.id === PUERTA)) PUERTA = '';
+  $('#sel-puerta').innerHTML = `<button type="button" data-p="" class="${PUERTA === '' ? 'activa' : ''}">Todas</button>`
+    + tipos.map(t => `<button type="button" data-p="${esc(t.id)}" class="${t.id === PUERTA ? 'activa' : ''}">${esc(t.corto)}</button>`).join('');
+  $$('#sel-puerta button').forEach(b => b.onclick = () => { PUERTA = b.dataset.p; pintarPuerta(); });
+}
+function totalPunto() {
+  const t = evElegido()?.tipos.find(x => x.id === P_TIPO);
+  if (!t) { $('#p-total').textContent = 'Elegí una fecha con entradas cargadas.'; return; }
+  const c = Math.max(1, +$('#p-cant').value || 1);
+  // Precio único, igual que online: el vendedor cobra un solo número, sin servicio aparte.
+  const pct = CFG.cargoPuntoPct ?? 10, unidad = t.unidadPunto ?? (t.precio + Math.round(t.precio * pct / 100));
+  $('#p-total').innerHTML = `Cobrás <b style="font-size:20px">${pesos(unidad * c)}</b> · ${c} × ${esc(t.nombre)} (${pesos(unidad)}) · ${esc(evElegido().nombre)} ${fCorta(evElegido().fecha)}`;
+}
+$('#p-cant').addEventListener('input', totalPunto);
+$('#p-dni').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
+$('#f-punto').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const err = $('#p-err'); err.style.display = 'none';
+  const b = ev.target.querySelector('button[type=submit]'); b.disabled = true;
+  try {
+    const d = await api('/api/admin/venta-punto', { method: 'POST', body: JSON.stringify({ evento: EVA, tipo: P_TIPO, cantidad: +$('#p-cant').value, cobro: $('#p-cobro').value,
+      nombre: $('#p-nombre').value, email: $('#p-email').value, dni: $('#p-dni').value }) });
+    ORDEN = { id: d.ordenId };
+    $('#mq-tit').textContent = `Venta registrada · ${pesos(d.total)}`;
+    $('#mq-sub').textContent = 'Las entradas también le llegaron al mail. Puede escanear estos QR ahora mismo.';
+    $('#mq-qrs').innerHTML = d.qrs.map(q => `<div class="qr-mini"><img src="${esc(q.url)}" alt="">${q.indice}</div>`).join('');
+    $('#mq-ingreso').hidden = true; $('#mq-email').value = $('#p-email').value; $('#mq-msg').innerHTML = '';
+    $('#m-qr').classList.add('abierto');
+    ['#p-nombre', '#p-email', '#p-dni'].forEach(s => $(s).value = ''); $('#p-cant').value = 1; totalPunto();
+    cargarMisVentas();
+  } catch (x) { err.textContent = x.message; err.style.display = 'block'; }
+  b.disabled = false;
+});
+async function cargarMisVentas() {
+  try {
+    const d = await api('/api/admin/mis-ventas'), t = d.totales;
+    $('#mv-cifras').innerHTML = [[pesos(t.cobrado), 'Cobrado'], [pesos(t.paraOrganizador), 'Para el organizador'], [pesos(t.costoServicio), 'Servicio'],
+      [pesos(t.efectivo), 'En efectivo'], [pesos(t.transferencia), 'Por transferencia'], [t.entradas, 'Entradas']].map(([b, s]) => `<div class="cifra"><b>${b}</b><span>${s}</span></div>`).join('');
+    $('#mv-filas').innerHTML = d.ordenes.map(o => `<tr><td>${fecha(o.fecha)}</td><td>${fCorta(o.eventoFecha)}</td><td>${etq(o.tipoNombre)}</td><td>${esc(o.nombre)}</td><td class="n">${o.cantidad}</td><td>${esc(o.cobro)}</td><td class="n">${pesos(o.total)}</td></tr>`).join('')
+      || '<tr><td colspan="7" class="ayuda">Todavía no vendiste.</td></tr>';
+  } catch (x) { /* el admin puede no tener ventas propias */ }
+}
+
+// ── Herramientas ──
+async function estadoChytapay() {
+  try {
+    const d = await api('/api/admin/chytapay');
+    const v = d.vinculo;
+    $('#cy-estado').innerHTML = (d.produccion ? '<b>Producción</b>' : '<b>Modo prueba (sandbox)</b>') + ' · '
+      + (v ? `Conectada la cuenta de <b>${esc(v.nombre || v.fantasia)}</b> (CUIT ${esc(v.cuit)}) desde el ${new Date(v.conectadoEn).toLocaleDateString('es-AR')}.`
+           : '<span class="err-msg">Todavía no hay una cuenta del organizador conectada: sin eso no se puede cobrar online.</span>')
+      + (d.configurado ? '' : '<br><span class="err-msg">Faltan los datos de Chytapay en el servidor (CHYTAPAY_*).</span>')
+      + (d.sede ? `<br>Sede de esta gala en Chytapay: <b>${esc(d.sede)}</b>${v ? ' · <a href="#" onclick="asignarSede();return false;">volver a asignar la cuenta a esta sede</a>' : ''}` : '');
+    $('#cy-boton').textContent = v ? 'Volver a conectar (otra cuenta o renovar)' : 'Generar enlace para conectar la cuenta del organizador';
+  } catch (x) { $('#cy-estado').textContent = x.message; }
+}
+async function conectarChytapay() {
+  try {
+    const d = await api('/api/admin/chytapay/conectar', { method: 'POST' });
+    $('#cy-enlace').innerHTML = `<p class="ayuda" style="margin-top:10px;">Mandáselo al organizador por WhatsApp (o abrilo con él al lado). Entra con <b>su</b> usuario de Chytapay, ve la comisión y autoriza. Sirve durante ${d.horas / 24} días, aunque se actualice el sistema.</p>
+      <div class="enlace" id="cy-url">${esc(d.url)}</div>
+      <div class="fila" style="margin-top:8px;"><button class="chico" onclick="navigator.clipboard.writeText(document.getElementById('cy-url').textContent).then(()=>this.textContent='Copiado')">Copiar enlace</button>
+      <a class="chico oro" href="${esc(d.url)}">Abrirlo acá</a></div>`;
+  } catch (x) { $('#cy-enlace').innerHTML = `<p class="err-msg">${esc(x.message)}</p>`; }
+}
+async function asignarSede() {
+  try { const d = await api('/api/admin/chytapay/sede', { method: 'POST' }); alert(`Listo: la cuenta quedó en la sede "${d.sede}".`); }
+  catch (x) { alert(x.message); }
+}
+function avisoChytapay() {
+  const q = new URLSearchParams(location.search), r = q.get('chytapay'), sede = q.get('sede');
+  if (!r) return;
+  history.replaceState(null, '', '/admin');
+  let msg = { ok: 'Listo: la cuenta de Chytapay del organizador quedó conectada.', error: 'No se pudo conectar la cuenta de Chytapay. Probá de nuevo.',
+    vencido: 'El enlace venció (dura 3 días). Generá uno nuevo.', cancelado: 'Se canceló la conexión con Chytapay.' }[r];
+  if (msg && sede === 'error') msg += '\n\nOjo: no se pudo asignar a la sede de esta gala. Revisá que la sede exista en el Portal (Tenants) y tocá "volver a asignar".';
+  if (msg) setTimeout(() => alert(msg), 300);
+  if (ES_ADMIN()) abrir('herramientas');
+}
+async function cargarSinImputar() {
+  try {
+    const d = await api('/api/admin/sin-imputar');
+    $('#si-filas').innerHTML = d.pagos.map(p => `<tr${p.resuelto ? ' style="opacity:.5"' : ''}><td>${fecha(p.fecha)}</td><td class="n">${pesos(p.monto)}</td><td>${esc(p.pagador || '—')}</td>
+      <td>${esc(MOTIVO[p.motivo] || p.motivo)}</td><td>${p.orden ? esc(p.orden.slice(-8)) : '—'}</td>
+      <td>${p.resuelto ? 'resuelto' : ES_ADMIN() ? `<button class="chico" onclick="resolver(${p.id})">Marcar resuelto</button>` : ''}</td></tr>`).join('')
+      || '<tr><td colspan="6" class="ayuda">No hay transferencias sin asignar.</td></tr>';
+  } catch (x) { /* sin permiso o sin datos */ }
+}
+async function resolver(id) { try { await api(`/api/admin/sin-imputar/${id}/resuelto`, { method: 'POST' }); cargarSinImputar(); } catch (x) { alert(x.message); } }
+async function exportar(soloEsta) {
+  const r = await fetch('/api/admin/exportar' + (soloEsta && EVA ? '?evento=' + encodeURIComponent(EVA) : ''), { headers: { Authorization: 'Bearer ' + S.token } });
+  if (!r.ok) return alert('No se pudo exportar');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = soloEsta && EVA ? `ventas-${EVA}.csv` : 'ventas.csv'; a.click();
+}
+async function cortesia() {
+  try { const d = await api('/api/admin/entrada-cortesia', { method: 'POST', body: JSON.stringify({ evento: EVA, tipo: C_TIPO, nombre: $('#c-nombre').value, email: $('#c-email').value, cantidad: +$('#c-cant').value }) });
+    $('#c-msg').innerHTML = `<span class="ok-msg">Enviada a ${esc(d.email)}.</span>`; $('#c-nombre').value = ''; $('#c-email').value = ''; }
+  catch (x) { $('#c-msg').innerHTML = `<span class="err-msg">${esc(x.message)}</span>`; }
+}
+async function prueba() {
+  try { const d = await api('/api/admin/entrada-prueba', { method: 'POST', body: JSON.stringify({ evento: EVA, tipo: P_TIPO, cantidad: 1 }) });
+    $('#prueba-qrs').innerHTML = `<p class="ayuda">Entrada de prueba para la fecha elegida: no cuenta en ventas ni en el cupo. Escaneala en la pestaña Puerta.</p>` + d.qrs.map(q => `<div class="qr-mini"><img src="${esc(q.url)}" alt=""></div>`).join(''); }
+  catch (x) { alert(x.message); }
+}
+async function repescar() {
+  try { const d = await api('/api/admin/repescar', { method: 'POST' }); alert(`Revisadas ${d.revisadas} compras sin pagar: ${d.emitidas} estaban pagas y se emitieron.`); cargarResumen(); }
+  catch (x) { alert(x.message); }
+}
+
+// ── Puerta ──
+let escaner = null, procesando = false, pausada = false, ingresados = 0, audio = null;
+function abrirCamara() {
+  if (!EVA) return alert('Elegí primero la fecha que estás controlando.');
+  if (escaner) return;
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch (e) {}
+  if (typeof Html5Qrcode === 'undefined') return alert('No cargó el lector de QR: revisá la conexión.');
+  $('#zona-scan').hidden = false; $('#b-camara').hidden = true; $('#reader').style.display = ''; $('#res').style.display = 'none';
+  escaner = new Html5Qrcode('reader');
+  escaner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, alLeer, () => {}).catch(() => mostrar('err', 'No se abrió la cámara', 'Usá el campo de abajo para pegar el código'));
+}
+function cerrarCamara() {
+  if (escaner) { try { escaner.stop(); } catch (e) {} escaner = null; }
+  $('#zona-scan').hidden = true; $('#b-camara').hidden = false; pausada = false; procesando = false;
+}
+function alLeer(txt) {
+  if (procesando) return;
+  procesando = true;
+  try { escaner.pause(true); pausada = true; } catch (e) {}
+  $('#reader').style.display = 'none';
+  validar(txt).finally(() => { procesando = false; });
+}
+function siguiente() {
+  $('#res').style.display = 'none';
+  if (pausada) { $('#reader').style.display = ''; try { escaner.resume(); } catch (e) {} pausada = false; }
+}
+function validarManual() { const c = $('#codigo-manual').value.trim(); if (c) validar(c); $('#codigo-manual').value = ''; }
+function mostrar(clase, titulo, detalle) { const r = $('#res'); r.className = 'resultado ' + clase; r.style.display = 'block'; $('#res-tit').textContent = titulo; $('#res-det').textContent = detalle || ''; }
+async function validar(codigo) {
+  try {
+    const r = await fetch('/api/validar', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S.token }, body: JSON.stringify({ codigo, evento: EVA, tipo: PUERTA || undefined }) });
+    if (r.status === 401) return salir();
+    const d = await r.json();
+    const det = [d.tipo, d.nombre, d.cantidad > 1 ? `${d.ingresadas} de ${d.cantidad} de esta compra` : ''].filter(Boolean).join(' · ');
+    if (d.ok) { mostrar('ok', d.prueba ? 'Prueba OK' : 'Pasa', det); ingresados++; $('#ingresados').textContent = ingresados; sonar('ok'); }
+    else if (d.estado === 'usado') { mostrar('warn', 'Ya entró', det); sonar('usado'); }
+    else { mostrar('err', d.msg || 'No válida', det); sonar('error'); }
+    if (navigator.vibrate) navigator.vibrate(d.ok ? 120 : [80, 60, 80]);
+  } catch (e) { mostrar('err', 'Sin conexión', 'Probá de nuevo'); sonar('error'); }
+}
+// Sonidos generados (sin archivos): dos notas que suben = pasa · dos iguales = repetida · grave = no pasa
+function tono(f, desde, dur, vol) {
+  const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + desde;
+  o.frequency.setValueAtTime(f, t); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + dur + .02);
+}
+function sonar(tipo) {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume();
+    if (tipo === 'ok') { tono(880, 0, .09, .35); tono(1320, .1, .14, .35); }
+    else if (tipo === 'usado') { tono(600, 0, .12, .3); tono(600, .18, .12, .3); }
+    else tono(200, 0, .35, .4);
+  } catch (e) {}
+}
+function probarSonido() { sonar('ok'); setTimeout(() => sonar('usado'), 900); setTimeout(() => sonar('error'), 1800); }
+
+// Arranque
+if (S?.token) armar(); else $('#v-login').hidden = false;
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comprar entradas</title>
+<meta name="theme-color" content="#141022">
+<link rel="icon" href="assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sistema.css">
+<link rel="stylesheet" href="/tema.css">
+<style>
+.tipos{display:grid;gap:10px;}
+.tipo{position:relative;display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;cursor:pointer;
+  background:rgba(246,240,230,.06);border:2px solid rgba(246,240,230,.14);transition:border-color .2s,background .2s;}
+.tipo input{position:absolute;opacity:0;pointer-events:none;}
+.tipo .talon{flex:none;width:58px;text-align:center;border-right:2px dashed rgba(246,240,230,.25);padding-right:12px;}
+.tipo .talon b{display:block;font-family:var(--f-display);font-weight:700;font-size:30px;line-height:1;color:var(--oro);}
+.tipo .talon small{font-weight:800;font-size:10px;letter-spacing:.14em;text-transform:uppercase;}
+.tipo .que{flex:1;min-width:0;}
+.tipo .que b{display:block;font-weight:800;font-size:16px;}
+.tipo .que small{display:block;color:var(--gris);font-size:12.5px;}
+.tipo .precio{text-align:right;font-family:var(--f-display);font-weight:700;font-size:23px;line-height:1;}
+.tipo:has(input:checked){border-color:var(--oro);background:rgba(231,194,125,.1);}
+.tipo.agotado{opacity:.45;cursor:not-allowed;}
+.tipo .estado{position:absolute;top:-9px;right:12px;font-weight:800;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  background:var(--rojo);color:#fff;border-radius:999px;padding:3px 9px;}
+.tipo .estado.pocas{background:var(--oro);color:#1d1830;}
+.cantidad{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;}
+.cantidad span{font-weight:700;}
+.contador{display:flex;align-items:center;gap:6px;}
+.contador button{width:46px;height:46px;border-radius:12px;border:none;cursor:pointer;font:800 24px var(--f-texto);color:#1d1830;background:var(--crema);}
+.contador button:disabled{opacity:.35;cursor:default;}
+.contador output{min-width:44px;text-align:center;font-family:var(--f-display);font-weight:700;font-size:30px;}
+.resumen{margin-top:18px;border-top:1px dashed rgba(246,240,230,.22);padding-top:14px;}
+.resumen div{display:flex;justify-content:space-between;font-size:14px;color:var(--gris);}
+.resumen .total{margin-top:8px;color:var(--crema);font-weight:800;font-size:15px;align-items:baseline;}
+.resumen .total b{font-family:var(--f-display);font-weight:700;font-size:32px;}
+.medios{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.medios span{font-weight:700;font-size:12px;padding:5px 10px;border-radius:999px;background:rgba(246,240,230,.08);border:1px solid rgba(246,240,230,.16);}
+.sandbox{background:#7c2d12;color:#ffedd5;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;margin-top:12px;}
+.cerrada{display:none;}
+.evento-elegido{display:flex;gap:14px;align-items:center;}
+.evento-elegido img{width:84px;height:84px;border-radius:14px;object-fit:cover;flex:none;}
+.evento-elegido b{display:block;font-family:var(--f-display);font-size:21px;line-height:1.15;}
+.evento-elegido small{display:block;color:var(--gris);font-size:13px;margin-top:3px;}
+.evento-elegido .cambiar{font-size:13px;margin-top:6px;display:inline-block;}
+.importante{margin-top:14px;border-left:4px solid var(--oro);background:rgba(231,194,125,.1);border-radius:10px;padding:11px 14px;font-size:14px;}
+/* Pago simulado (solo pruebas en una PC) */
+.simulado{position:fixed;inset:0;background:rgba(10,8,18,.85);display:none;align-items:center;justify-content:center;padding:16px;z-index:60;}
+.simulado.abierto{display:flex;}
+.simulado .caja{background:var(--noche-2);border:1px solid rgba(231,194,125,.3);border-radius:18px;max-width:420px;width:100%;padding:22px;text-align:center;}
+</style>
+</head>
+<body>
+<main class="marco">
+  <a class="cabeza" href="/"><img src="assets/logo.webp" width="58" height="58" alt="">
+    <span><small id="cab-organiza"></small><b id="cab-nombre">Entradas</b></span></a>
+
+  <h1>Comprá tu <em>entrada</em></h1>
+  <p class="bajada" id="bajada">Elegís, pagás por transferencia y el QR te llega al correo al instante.</p>
+  <div class="sandbox" id="sandbox" hidden>MODO PRUEBA: los pagos no son reales.</div>
+  <div class="tarjeta cerrada" id="cerrada"><p>La venta online todavía no está abierta. Volvé a la <a href="/">página principal</a>.</p></div>
+
+  <form id="compra" novalidate>
+    <section class="tarjeta" id="caja-fechas" hidden>
+      <p class="paso"><span>1</span>¿Qué fecha?</p>
+      <div class="tipos" id="fechas"></div>
+    </section>
+    <section class="tarjeta" id="caja-evento" hidden>
+      <div class="evento-elegido" id="evento-elegido"></div>
+    </section>
+    <section class="tarjeta">
+      <p class="paso"><span id="n-entradas">1</span>Tus entradas</p>
+      <div class="tipos" id="tipos"></div>
+      <div class="cantidad">
+        <span>¿Cuántas entradas?</span>
+        <div class="contador">
+          <button type="button" id="menos" aria-label="Una menos">−</button>
+          <output id="cant" aria-live="polite">1</output>
+          <button type="button" id="mas" aria-label="Una más">+</button>
+        </div>
+      </div>
+      <div class="resumen">
+        <div><span id="r-linea">—</span></div>
+        <div class="total"><span>Total</span><b id="r-total">—</b></div>
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <p class="paso"><span>2</span>Tus datos</p>
+      <label for="nombre">Nombre y apellido</label>
+      <input id="nombre" name="nombre" autocomplete="name" required>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" required>
+      <p class="ayuda">Ahí te llegan las entradas: revisalo bien.</p>
+      <label for="dni">DNI</label>
+      <input id="dni" name="dni" inputmode="numeric" autocomplete="off" maxlength="9" required>
+      <p class="ayuda">Con tu email y tu DNI recuperás las entradas si se te pierde el mail.</p>
+    </section>
+
+    <section class="tarjeta">
+      <p class="paso"><span>3</span>Pagás por transferencia</p>
+      <p style="font-size:14px;">Te damos un número de cuenta (CVU) para transferir desde la app de tu banco o tu billetera:</p>
+      <div class="medios"><span>Mercado Pago</span><span>Ualá</span><span>Naranja X</span><span>MODO</span><span>Cualquier banco</span></div>
+      <div class="importante"><b>Importante:</b> transferí desde una cuenta <b>a tu nombre</b> y, cuando te lo pida, poné el DNI del titular de esa cuenta. Si transfiere otra persona, el pago no se reconoce solo.</div>
+      <div class="error" id="error" role="alert"></div>
+      <button class="btn" id="pagar" type="submit" style="margin-top:16px;">Ir a pagar</button>
+      <p class="ayuda centro" id="reserva" style="margin-top:8px;"></p>
+    </section>
+  </form>
+
+  <p class="pie">¿Ya compraste? <a href="/mis-entradas">Mis entradas</a> · <a href="/">Volver a la cartelera</a><span id="pie-wa" hidden> · ¿Problemas para pagar? <a id="pie-wa-a" target="_blank" rel="noopener">WhatsApp</a></span></p>
+</main>
+
+<div class="simulado" id="simulado"><div class="caja">
+  <p class="paso" style="justify-content:center;">Pago simulado</p>
+  <p class="ayuda">Esto aparece solo en las pruebas, en lugar de la pantalla de Chytapay.</p>
+  <p style="margin:14px 0;font-size:15px;">Total <b id="sim-total"></b></p>
+  <button class="btn" id="sim-pagar">Simular que pagó</button>
+  <p style="margin-top:10px;"><button class="btn linea" id="sim-cancelar">Cancelar</button></p>
+</div></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const pesos = n => '$' + Number(n).toLocaleString('es-AR');
+const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+let CFG = null, EV = null, tipo = null, cant = 1;
+const params = new URLSearchParams(location.search);
+const pedido = params.get('tipo'), pedidoEvento = params.get('evento');
+const SDK = 'https://unpkg.com/@chytapay/integration-widget@1.6.0';   // versión fija: un cambio de ellos no nos cambia la página
+
+const talon = ev => { const [, m, d] = String(ev.fecha || '').split('-').map(Number); return d ? [MESES[m - 1], d] : ['', '★']; };
+const vendibles = () => CFG.eventos.filter(e => e.vendible);
+// Paso 1 (solo si hay más de una fecha a la venta y no se entró desde una): elegir la fecha.
+function pintarFechas() {
+  const lista = vendibles();
+  $('#caja-fechas').hidden = !(lista.length > 1 && !EV);
+  $('#caja-evento').hidden = !EV;
+  $('#n-entradas').textContent = $('#caja-fechas').hidden ? '1' : '2';
+  if (EV) {
+    $('#evento-elegido').innerHTML = `${EV.imagen ? `<img src="${esc(EV.imagen)}" alt="">` : ''}<div><b>${esc(EV.nombre)}</b>
+      <small>${esc(EV.cuando)}${EV.artistas?.length ? ' · ' + esc(EV.artistas.join(', ')) : ''}</small>
+      ${lista.length > 1 ? '<a href="#" class="cambiar" id="cambiar">Cambiar de fecha</a>' : ''}</div>`;
+    const c = $('#cambiar'); if (c) c.onclick = e => { e.preventDefault(); EV = null; tipo = null; pintarFechas(); pintarTipos(); actualizar(); };
+    return;
+  }
+  $('#fechas').innerHTML = lista.map(e => {
+    const [mes, dia] = talon(e);
+    const desde = Math.min(...Object.values(e.tipos).map(t => t.final));
+    return `<label class="tipo"><input type="radio" name="fecha" value="${esc(e.id)}">
+      <span class="talon"><small>${esc(mes)}</small><b>${esc(dia)}</b></span>
+      <span class="que"><b>${esc(e.nombre)}</b><small>${esc(e.artistas?.join(', ') || e.cuando)}</small></span>
+      <span class="precio">${pesos(desde)}</span></label>`;
+  }).join('');
+  document.querySelectorAll('input[name=fecha]').forEach(r => r.addEventListener('change', () => { EV = CFG.eventos.find(e => e.id === r.value); tipo = null; pintarFechas(); pintarTipos(); actualizar(); }));
+}
+function pintarTipos() {
+  if (!EV) { $('#tipos').innerHTML = '<p class="ayuda">Primero elegí la fecha.</p>'; return; }
+  const [mes, dia] = talon(EV);
+  $('#tipos').innerHTML = Object.entries(EV.tipos).map(([k, t]) => {
+    const agotado = t.estado === 'agotado';
+    const marca = agotado ? '<span class="estado">Agotado</span>' : t.estado === 'pocas' ? '<span class="estado pocas">Quedan pocas</span>' : '';
+    return `<label class="tipo${agotado ? ' agotado' : ''}">
+      <input type="radio" name="tipo" value="${esc(k)}" ${agotado ? 'disabled' : ''}>${marca}
+      <span class="talon"><small>${esc(mes)}</small><b>${esc(dia)}</b></span>
+      <span class="que"><b>${esc(t.nombre)}</b><small>${esc(t.detalle || '')}</small></span>
+      <span class="precio">${pesos(t.final)}</span></label>`;
+  }).join('');
+  document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', () => { tipo = r.value; actualizar(); }));
+  const inicial = [tipo, pedido, ...Object.keys(EV.tipos)].find(k => k && EV.tipos[k] && EV.tipos[k].estado !== 'agotado');
+  if (inicial) { document.querySelector(`input[name=tipo][value="${CSS.escape(inicial)}"]`).checked = true; tipo = inicial; }
+}
+function actualizar() {
+  const t = EV && tipo && EV.tipos[tipo];
+  if (!t) { $('#r-linea').textContent = '—'; $('#r-total').textContent = '—'; $('#pagar').textContent = 'Ir a pagar'; }
+  $('#cant').textContent = cant;
+  $('#menos').disabled = cant <= 1; $('#mas').disabled = cant >= CFG.maxEntradas;
+  if (!t) return;
+  // Un solo precio, sin costo de servicio aparte.
+  $('#r-linea').textContent = `${cant} × ${t.nombre} (${pesos(t.final)})`;
+  $('#r-total').textContent = pesos(t.final * cant);
+  $('#pagar').textContent = `Ir a pagar ${pesos(t.final * cant)}`;
+}
+$('#menos').onclick = () => { if (cant > 1) { cant--; actualizar(); } };
+$('#mas').onclick = () => { if (cant < CFG.maxEntradas) { cant++; actualizar(); } };
+$('#dni').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
+
+function error(msg) { const e = $('#error'); e.textContent = msg; e.style.display = msg ? 'block' : 'none'; }
+function refrescar() {
+  fetch('/api/config').then(r => r.json()).then(c => {
+    CFG = c; if (EV) EV = CFG.eventos.find(e => e.id === EV.id) || null;
+    if (tipo && !(EV?.tipos[tipo] && EV.tipos[tipo].estado !== 'agotado')) tipo = null;
+    pintarFechas(); pintarTipos(); actualizar();
+  }).catch(() => {});
+}
+function cargarSDK() {
+  if (window.ChytaPay) return Promise.resolve();
+  return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = SDK; s.onload = ok; s.onerror = () => mal(new Error('No cargó la pantalla de pago. Revisá tu conexión.')); document.head.appendChild(s); });
+}
+const exito = orden => location.href = '/pago-exitoso?orden=' + encodeURIComponent(orden);
+function reactivar() { $('#pagar').disabled = false; actualizar(); }
+
+async function abrirPago(d) {
+  if (d.pago.pk === 'simulado') {
+    $('#sim-total').textContent = pesos(d.total); $('#simulado').classList.add('abierto');
+    $('#sim-pagar').onclick = async () => { await fetch('/api/dev/confirmar/' + encodeURIComponent(d.orderId), { method: 'POST' }); exito(d.orderId); };
+    $('#sim-cancelar').onclick = () => { $('#simulado').classList.remove('abierto'); reactivar(); };
+    return;
+  }
+  await cargarSDK();
+  ChytaPay.init({ pk: d.pago.pk });
+  ChytaPay.checkout({
+    paymentId: d.pago.paymentId,
+    // onSuccess es solo para la pantalla: la entrada la emite el aviso firmado que le llega al servidor.
+    onSuccess: () => exito(d.orderId),
+    onError: () => { error('El pago venció o no se pudo completar. Si ya transferiste, no transfieras de nuevo: revisá tu correo o Mis entradas.'); reactivar(); refrescar(); },
+    onCancel: () => { reactivar(); },
+    theme: { '--chytapay-primary': getComputedStyle(document.documentElement).getPropertyValue('--oro').trim() || '#e7c27d' },
+  });
+}
+
+$('#compra').addEventListener('submit', async ev => {
+  ev.preventDefault(); error('');
+  if (!EV) return error('Elegí la fecha.');
+  const datos = { evento: EV.id, tipo, cantidad: cant, nombre: $('#nombre').value.trim(), email: $('#email').value.trim(), dni: $('#dni').value.trim() };
+  if (!tipo) return error('Elegí el tipo de entrada.');
+  if (datos.nombre.length < 3) { $('#nombre').focus(); return error('Falta tu nombre y apellido.'); }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(datos.email)) { $('#email').focus(); return error('Revisá el email: ahí te llegan las entradas.'); }
+  if (datos.dni.length < 7) { $('#dni').focus(); return error('Revisá el DNI (solo números).'); }
+  const b = $('#pagar');
+  b.disabled = true; b.textContent = 'Preparando el pago…';
+  try {
+    const r = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'No se pudo iniciar la compra.');
+    b.textContent = 'Pagando…';
+    await abrirPago(d);
+  } catch (e) {
+    error(e.message); reactivar(); refrescar();
+  }
+});
+
+fetch('/api/config').then(r => r.json()).then(c => {
+  CFG = c;
+  document.title = 'Comprar entradas · ' + c.sitio.nombre;
+  $('#cab-nombre').textContent = c.sitio.nombre; $('#cab-organiza').textContent = c.sitio.lema || c.sitio.organiza || c.sitio.ciudad || '';
+  $('#bajada').textContent = `${c.sitio.lugar}${c.sitio.direccion ? ' · ' + c.sitio.direccion : ''}. Pagás por transferencia y el QR te llega al correo al instante.`;
+  if (c.sitio.ayudaWhatsapp) {
+    $('#pie-wa-a').href = `https://wa.me/${encodeURIComponent(c.sitio.ayudaWhatsapp)}?text=${encodeURIComponent(`Hola, tengo una consulta sobre las entradas de ${c.sitio.nombre}.`)}`;
+    $('#pie-wa').hidden = false;
+  }
+  const lista = vendibles();
+  if (!c.ventaAbierta || !lista.length) {
+    // Si la venta online ya cerró por fecha (queda solo la puerta), se dice eso y no "todavía no abrió".
+    // Por la fecha y no por "vendible": con la llave general cerrada (VENTA_ABIERTA=false) tampoco es vendible.
+    const hoy = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);   // fecha argentina (UTC-3)
+    const fin = c.eventos.find(e => e.ventaHasta && hoy > e.ventaHasta);
+    if (fin) {
+      const enPuerta = Object.values(fin.tipos).map(t => t.finalDespues).filter(Boolean);
+      $('#cerrada').innerHTML = `<p>La venta online terminó el ${fin.ventaHasta.slice(8, 10)}/${fin.ventaHasta.slice(5, 7)}.${enPuerta.length ? ` Quedan entradas en la puerta: <b>${pesos(Math.min(...enPuerta))}</b>.` : ''} Volvé a la <a href="/">página principal</a>.</p>`;
+    }
+    $('#compra').style.display = 'none'; $('#cerrada').style.display = 'block'; return;
+  }
+  if (c.sandbox) $('#sandbox').hidden = false;
+  EV = lista.find(e => e.id === pedidoEvento) || (lista.length === 1 ? lista[0] : null);
+  $('#reserva').textContent = `Te guardamos el lugar ${c.reservaMinutos} minutos mientras pagás.`;
+  pintarFechas(); pintarTipos(); actualizar();
+}).catch(() => error('No pudimos cargar los precios. Revisá tu conexión y recargá la página.'));
+</script>
+</body>
+</html>

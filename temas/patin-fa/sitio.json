@@ -1,0 +1,60 @@
+{
+  "nombre": "El Quinto Elemento · Show '26",
+  "lema": "Escuela Patín Artístico F.A.",
+  "organiza": "Escuela Patín Artístico F.A.",
+  "lugar": "Boedo",
+  "direccion": "Treinta y Tres Orientales 1182, esquina Constitución",
+  "ciudad": "Boedo, CABA",
+  "instagram": "patin_fa",
+  "ayudaWhatsapp": "5493854414082",
+  "mail": {
+    "encabezado": "#1b1236",
+    "sobrecabeza": "#cfa8f2",
+    "acento": "#663B8F",
+    "acentoTexto": "#ffffff",
+    "titulos": "#663B8F",
+    "franja": [
+      "#ff4a3d",
+      "#ffc53d",
+      "#4cd98a",
+      "#5b9cff"
+    ]
+  },
+  "menores": "Pagan entrada desde los 11 años (presentarse con DNI). Las y los patinadores del show no pagan.",
+  "modo": "gala",
+  "precioIncluyeCargo": true,
+  "eventos": [
+    {
+      "id": "2026-12-13-el-quinto-elemento",
+      "nombre": "El Quinto Elemento",
+      "subtitulo": "Show '26 · Escuela Patín Artístico F.A.",
+      "fecha": "2026-12-13",
+      "hora": "17:00",
+      "puertas": "16 h",
+      "ventaHasta": "2026-12-12",
+      "artistas": [],
+      "tipos": [
+        {
+          "id": "general",
+          "nombre": "Entrada general",
+          "corto": "General",
+          "detalle": "Desde 11 años, con DNI",
+          "precio": 26000,
+          "cupo": 100000,
+          "etapas": [
+            {
+              "hasta": "2026-11-30",
+              "precio": 20000,
+              "nombre": "Noviembre"
+            },
+            {
+              "hasta": "2026-12-12",
+              "precio": 24000,
+              "nombre": "Diciembre"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

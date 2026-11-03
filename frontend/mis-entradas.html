@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mis entradas</title>
+<meta name="theme-color" content="#141022">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sistema.css">
+<link rel="stylesheet" href="/tema.css">
+<style>.usada{display:inline-block;margin-top:6px;font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7d7590;}</style>
+</head>
+<body>
+<main class="marco">
+  <a class="cabeza" href="/"><img src="assets/logo.webp" width="58" height="58" alt="">
+    <span><small data-sitio="bajada"></small><b data-sitio="nombre">Entradas</b></span></a>
+  <h1>Mis <em>entradas</em></h1>
+  <p class="bajada">Con el email y el DNI que usaste al comprar.</p>
+  <form class="tarjeta" id="buscar" novalidate>
+    <label for="email">Email</label>
+    <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" required>
+    <label for="dni">DNI</label>
+    <input id="dni" inputmode="numeric" maxlength="9" required>
+    <div class="error" id="error" role="alert"></div>
+    <button class="btn" type="submit" style="margin-top:16px;">Buscar mis entradas</button>
+  </form>
+  <div id="resultado"></div>
+  <p class="pie"><a href="/">Volver al evento</a></p>
+</main>
+<script src="cabeza.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+$('#dni').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
+$('#buscar').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const err = $('#error'); err.style.display = 'none';
+  const b = ev.target.querySelector('button'); b.disabled = true; b.textContent = 'Buscando…';
+  try {
+    const r = await fetch('/api/mis-entradas', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: $('#email').value.trim(), dni: $('#dni').value.trim() }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'No se pudo buscar.');
+    if (!d.ordenes.length) {
+      $('#resultado').innerHTML = '<div class="tarjeta"><p>No encontramos entradas con esos datos. Revisá el email y el DNI que usaste al comprar. Si pagaste hace un momento, esperá unos minutos.</p></div>';
+    } else {
+      $('#resultado').innerHTML = d.ordenes.map(o => `<section class="tarjeta">
+        <p class="paso">${esc(o.eventoNombre)} · ${esc(o.cuando)}</p><p class="ayuda" style="margin:-6px 0 10px;">${esc(o.tipoNombre)} · ${o.cantidad}</p>
+        <div class="aviso">Hacé una captura de cada QR: en el lugar puede no haber señal. Cada QR vale solo para esa fecha.</div>
+        <div class="qrs">${o.qrs.map(q => `<div class="qr"><b>${esc(o.tipoNombre)}</b><small>${q.indice} de ${o.cantidad}</small>
+          <img src="${esc(q.url)}" width="250" height="250" alt="Código QR ${q.indice}">
+          ${q.usado ? '<span class="usada">Ya ingresó</span>' : ''}</div>`).join('')}</div>
+      </section>`).join('');
+    }
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  b.disabled = false; b.textContent = 'Buscar mis entradas';
+});
+</script>
+</body>
+</html>

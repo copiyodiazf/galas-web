@@ -1,0 +1,18 @@
+/* Tema de "El Quinto Elemento" (Escuela Patín Artístico F.A.): la noche violeta de la marca y los cuatro
+   elementos del flyer como acentos (colores de Flor: rojo fuego, amarillo aire, verde tierra, azul agua). Tipografía geométrica, como el flyer. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600;700;800;900&display=swap');
+:root{
+  --noche:#120b24; --noche-2:#1b1236; --noche-3:#271a4c; --oro:#cfa8f2; --oro-vivo:#ead8ff; --crema:#f7f2fc;
+  --gris:#bcb1d6; --tierra:#663B8F;
+  --oro-degrade:linear-gradient(90deg,#ff4a3d,#ffc53d 30%,#4cd98a 55%,#5b9cff 78%,#cfa8f2);   /* fuego, aire, tierra, agua, quinto */
+  --f-display:'Poppins',system-ui,sans-serif; --f-texto:'Poppins',system-ui,sans-serif;
+}
+body{background:radial-gradient(ellipse 80% 45% at 0% 0%,rgba(255,74,61,.18),transparent 70%),
+                radial-gradient(ellipse 80% 45% at 100% 30%,rgba(82,224,180,.12),transparent 70%),
+                radial-gradient(ellipse 90% 50% at 50% 100%,rgba(102,59,143,.45),transparent 70%),var(--noche);}
+h1{font-weight:800;letter-spacing:-.02em;}
+.tarjeta{background:linear-gradient(180deg,rgba(39,26,76,.92),rgba(27,18,54,.92));border-color:rgba(207,168,242,.22);}
+.btn{color:#1a0f33;background:linear-gradient(180deg,#f0e2ff,#bf94e8);box-shadow:0 10px 26px rgba(191,148,232,.28);}
+.paso span{color:#1a0f33;}
+th{background:rgba(27,18,54,.97) !important;}
+.cabeza img{background:#fff;}

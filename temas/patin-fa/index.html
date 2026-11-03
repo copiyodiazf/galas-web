@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Portada PROPIA de la gala "El Quinto Elemento" (tema patin-fa). El servidor reemplaza NOMBRE, DESCRIPCION y URL
+     (entre dobles porcentajes) para la vista previa de WhatsApp. Los precios NO van escritos acá: salen de /api/config. -->
+<title>%%NOMBRE%%</title>
+<meta name="description" content="%%DESCRIPCION%%">
+<meta property="og:type" content="website">
+<meta property="og:title" content="%%NOMBRE%%">
+<meta property="og:description" content="%%DESCRIPCION%%">
+<meta property="og:url" content="%%URL%%/">
+<meta property="og:image" content="%%URL%%/assets/compartir.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#120b24">
+<link rel="icon" href="assets/logo.webp">
+<link rel="preload" as="image" href="assets/fotos/el-fuego-700.webp" imagesrcset="assets/fotos/el-fuego-700.webp 700w, assets/fotos/el-fuego-1400.webp 1400w" imagesizes="100vw" fetchpriority="high">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+<!-- La compra se prepara apenas se apunta al botón: abre al instante (Chrome/Android; los demás lo ignoran). -->
+<script type="speculationrules">{"prerender":[{"where":{"href_matches":"/comprar*"},"eagerness":"moderate"}]}</script>
+<style>
+/* ───── Elementos y marca ───── */
+@property --giro{syntax:"<angle>";inherits:false;initial-value:0deg}
+@property --n{syntax:"<integer>";inherits:true;initial-value:1}
+:root{
+  /* Colores de Flor: rojo fuego, amarillo aire, verde tierra, azul agua (y el violeta de la marca). */
+  --fuego:#ff4a3d; --aire:#ffc53d; --tierra:#4cd98a; --agua:#5b9cff; --quinto:#cfa8f2; --violeta:#663B8F;
+  --noche:#120b24; --noche-2:#1b1236; --noche-3:#271a4c; --tinta:#f7f2fc; --gris:#bcb1d6;
+  /* Variantes derivadas de cada color (color relativo): sin inventar códigos a mano. */
+  --fuego-osc:#8a1a2a; --aire-osc:#7a5410; --tierra-osc:#0d5c3a; --agua-osc:#21407e;
+  --f:'Poppins',system-ui,sans-serif;
+  --borde:16px; --hueco:7px;
+}
+@supports (color:oklch(from red l c h)){
+  :root{ --fuego-osc:oklch(from var(--fuego) calc(l - .28) c h); --tierra-osc:oklch(from var(--tierra) calc(l - .38) c h);
+         --agua-osc:oklch(from var(--agua) calc(l - .38) c h); --aire-osc:oklch(from var(--aire) calc(l - .36) c h); }
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+[hidden]{display:none !important;}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;}
+body{font-family:var(--f);color:var(--tinta);background:var(--noche);line-height:1.55;overflow-x:hidden;}
+img{display:block;max-width:100%;}
+a{color:var(--quinto);}
+h2,h3{text-wrap:balance;}
+.saltar{position:absolute;left:-9999px;top:8px;background:#fff;color:#000;padding:8px 12px;border-radius:8px;z-index:50;}
+.saltar:focus{left:8px;}
+.envase{max-width:1080px;margin:0 auto;padding:0 16px;}
+
+/* ───── Portada: las cuatro bandas del flyer ───── */
+.portada{position:relative;height:100svh;min-height:600px;max-height:1100px;padding:var(--hueco);display:grid;grid-template-rows:repeat(4,1fr);gap:var(--hueco);}
+.banda{position:relative;overflow:hidden;border-radius:var(--borde);background:var(--c-osc);}
+.banda img{width:100%;height:100%;object-fit:cover;
+  animation:encender 1.05s cubic-bezier(.2,.75,.15,1) both;animation-delay:calc((var(--n) - 1) * 150ms);}
+.banda:nth-child(even) img{--desde:inset(0 0 0 100%);}
+@keyframes encender{from{clip-path:var(--desde,inset(0 100% 0 0));scale:1.14;filter:brightness(1.8) saturate(1.3);}}
+/* El orden de encendido sale de la posición de cada banda (sibling-index); sin soporte, de nth-child. */
+.banda:nth-child(2){--n:2}.banda:nth-child(3){--n:3}.banda:nth-child(4){--n:4}
+@supports (order:sibling-index()){ .banda{--n:sibling-index();} }
+.fuego{--c:var(--fuego);--c-osc:var(--fuego-osc);} .fuego img{object-position:50% 40%;}
+.aire{--c:var(--aire);--c-osc:var(--aire-osc);} .aire img{object-position:50% 55%;}
+.tierra{--c:var(--tierra);--c-osc:var(--tierra-osc);} .tierra img{object-position:50% 30%;}
+.agua{--c:var(--agua);--c-osc:var(--agua-osc);} .agua img{object-position:50% 35%;}
+.rotulo{position:absolute;left:14px;top:10px;font-weight:600;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:#fff;opacity:.85;
+  text-shadow:0 1px 8px rgba(0,0,0,.5);}
+.rotulo b{font-weight:900;margin-right:6px;color:var(--c);}
+.banda:nth-child(2) .rotulo{top:auto;bottom:10px;left:auto;right:14px;}   /* arriba lo tapa "ELEMENTO"; a la izquierda, la ráfaga del borde */
+
+/* El borde de abajo de cada banda tiene la forma de su elemento (shape(): se adapta al ancho). */
+@supports (clip-path:shape(from 0 0, line to 100% 0)){
+  .fuego{clip-path:shape(from 0 0, hline to 100%, vline to calc(100% - 13px),
+    curve to 91% 100% with 96% calc(100% - 2px), curve to 83% calc(100% - 13px) with 85% calc(100% - 3px),
+    curve to 72% 100% with 78% calc(100% - 1px), curve to 63% calc(100% - 13px) with 65% calc(100% - 3px),
+    curve to 52% 100% with 58% calc(100% - 1px), curve to 43% calc(100% - 13px) with 45% calc(100% - 3px),
+    curve to 32% 100% with 38% calc(100% - 1px), curve to 23% calc(100% - 13px) with 25% calc(100% - 3px),
+    curve to 12% 100% with 18% calc(100% - 1px), curve to 0 calc(100% - 13px) with 5% calc(100% - 3px), close);}
+  .tierra{clip-path:shape(from 0 0, hline to 100%, vline to calc(100% - 12px), hline to 86%, vline to 100%, hline to 64%,
+    vline to calc(100% - 6px), hline to 41%, vline to 100%, hline to 22%, vline to calc(100% - 12px), hline to 0, close);}
+  .agua{clip-path:shape(from 0 0, hline to 100%, vline to calc(100% - 10px),
+    curve to 75% calc(100% - 10px) with 87.5% 100%, curve to 50% calc(100% - 10px) with 62.5% calc(100% - 20px),
+    curve to 25% calc(100% - 10px) with 37.5% 100%, curve to 0 calc(100% - 10px) with 12.5% calc(100% - 20px), close);
+    animation:ola 5s ease-in-out infinite alternate;}
+  @keyframes ola{to{clip-path:shape(from 0 0, hline to 100%, vline to calc(100% - 10px),
+    curve to 75% calc(100% - 10px) with 87.5% calc(100% - 20px), curve to 50% calc(100% - 10px) with 62.5% 100%,
+    curve to 25% calc(100% - 10px) with 37.5% calc(100% - 20px), curve to 0 calc(100% - 10px) with 12.5% 100%, close);}}
+  .aire{clip-path:shape(from 0 0, hline to 100%, vline to 100%,
+    curve to 0 calc(100% - 18px) with 62% calc(100% + 6px) / 30% calc(100% - 26px), close);}
+  .portada.quieta .agua{animation-play-state:paused;}
+}
+
+/* El título, encima de las bandas, como en el flyer. */
+.texto{position:absolute;inset:var(--hueco);display:grid;grid-template-rows:repeat(4,1fr);pointer-events:none;padding:0 4vw;}
+.texto > *{pointer-events:auto;}
+.show{grid-row:1;align-self:end;justify-self:end;font-weight:300;font-size:clamp(34px,11vw,108px);line-height:1;letter-spacing:-.04em;
+  color:rgba(255,255,255,.82);margin-bottom:-.06em;text-box:trim-both cap alphabetic;}
+.show span{font-weight:300;}
+@media (max-width:700px){ .show{align-self:center;margin:0 0 .5em;} }
+h1{grid-row:2;align-self:start;font-size:clamp(52px,16.4vw,190px);line-height:.9;letter-spacing:-.045em;color:#fff;text-transform:uppercase;
+  margin-top:calc(-.62em - var(--hueco));text-shadow:0 6px 40px rgba(18,11,36,.35);}
+h1 .fino,h1 .grueso{display:block;text-box:trim-both cap alphabetic;}
+h1 .fino{font-weight:400;}
+h1 .grueso{font-weight:900;margin-top:.1em;}
+h1 .grueso span{display:inline-block;animation:letra .75s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(380ms + var(--k,0) * 55ms);}
+h1 .grueso span:nth-child(2){--k:1}h1 .grueso span:nth-child(3){--k:2}h1 .grueso span:nth-child(4){--k:3}
+h1 .grueso span:nth-child(5){--k:4}h1 .grueso span:nth-child(6){--k:5}h1 .grueso span:nth-child(7){--k:6}h1 .grueso span:nth-child(8){--k:7}
+@supports (order:sibling-index()){ h1 .grueso span{--k:calc(sibling-index() - 1);} }
+@keyframes letra{from{translate:0 .5em;opacity:0;filter:blur(8px);}}
+.cuando{grid-row:3;align-self:end;justify-self:end;text-align:right;color:#fff;margin-bottom:12px;text-shadow:0 2px 14px rgba(0,0,0,.45);}
+.cuando b{display:block;font-weight:800;font-size:clamp(28px,8.4vw,64px);line-height:1;letter-spacing:-.03em;}
+.cuando span{display:block;font-weight:400;font-size:clamp(15px,4.3vw,26px);margin-top:4px;}
+.abajo{grid-row:4;align-self:end;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-bottom:16px;}
+.abajo .logo{width:clamp(64px,17vw,110px);height:auto;border-radius:50%;box-shadow:0 8px 30px rgba(0,0,0,.35);}
+
+/* ───── Botón con aro de los elementos (@property: el ángulo del degradé gira) ───── */
+.comprar{position:relative;display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;text-decoration:none;color:#fff;
+  padding:14px 22px 13px;border-radius:999px;border:3px solid transparent;font-weight:800;font-size:17px;letter-spacing:.02em;line-height:1.1;
+  background:linear-gradient(var(--violeta),var(--violeta)) padding-box,
+             conic-gradient(from var(--giro),var(--fuego),var(--aire),var(--tierra),var(--agua),var(--quinto),var(--fuego)) border-box;
+  box-shadow:0 12px 34px rgba(102,59,143,.55);animation:aro 5s linear infinite;}
+.comprar small{font-weight:400;font-size:12.5px;letter-spacing:.04em;opacity:.9;}
+.comprar:focus-visible{outline:3px solid #fff;outline-offset:3px;}
+@keyframes aro{to{--giro:360deg;}}
+.comprar.grande{font-size:20px;padding:17px 28px 15px;}
+.comprar.apagado{animation:none;background:linear-gradient(#3b2a5e,#3b2a5e) padding-box,linear-gradient(#5b4a7e,#5b4a7e) border-box;box-shadow:none;}
+
+/* ───── Secciones ───── */
+section.bloque{padding:72px 0 8px;}
+.antetitulo{font-weight:600;font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--quinto);}
+h2{font-weight:800;font-size:clamp(32px,8vw,58px);line-height:1;letter-spacing:-.035em;margin:10px 0 14px;}
+h2 em{font-style:normal;font-weight:300;}
+.bajada{color:var(--gris);font-size:16px;max-width:60ch;}
+
+/* Entradas: calendario de precios. La etapa de hoy queda marcada por un recuadro anclado a ella (anchor positioning). */
+.etapas{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:26px 0 18px;}
+.etapa{position:relative;z-index:1;padding:16px 12px 14px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);}
+.etapa small{display:block;font-weight:600;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gris);}
+.etapa b{display:block;font-weight:800;font-size:clamp(20px,5.6vw,32px);letter-spacing:-.03em;line-height:1.15;margin-top:4px;}
+.etapa span{display:block;font-size:12px;color:var(--gris);margin-top:2px;}
+.etapa.paso b{text-decoration:line-through;text-decoration-thickness:2px;opacity:.45;}
+.etapa.vigente{anchor-name:--hoy;}
+.etapa.vigente small{color:#1a0f33;}
+.etapa.vigente span{color:#2b1a4d;}
+.etapa.vigente b{color:#1a0f33;}
+.hoy-marca{position:absolute;z-index:0;border-radius:18px;background:linear-gradient(160deg,#f3e6ff,var(--quinto));
+  box-shadow:0 14px 40px rgba(207,168,242,.35);pointer-events:none;
+  position-anchor:--hoy;top:anchor(top);bottom:anchor(bottom);left:anchor(left);right:anchor(right);}
+.hoy-marca::after{content:"AHORA";position:absolute;top:-10px;right:10px;background:var(--fuego);color:#fff;font-weight:800;font-size:10px;letter-spacing:.18em;
+  padding:3px 8px;border-radius:99px;}
+@supports not (anchor-name:--a){ .hoy-marca{display:none;} .etapa.vigente{background:linear-gradient(160deg,#f3e6ff,var(--quinto));} }
+.reglas{display:grid;gap:10px;margin-top:6px;}
+.regla{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.04);border-radius:16px;padding:13px 15px;font-size:15px;}
+.regla i{font-style:normal;font-size:20px;line-height:1.3;}
+.seguro{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;margin-top:14px;padding:15px 16px;border-radius:16px;font-size:14.5px;
+  background:color-mix(in srgb,var(--tierra) 10%,transparent);border:1.5px solid color-mix(in srgb,var(--tierra) 55%,transparent);}
+.seguro svg{width:34px;height:34px;color:var(--tierra);}
+.seguro b{color:var(--tierra);}
+.accion{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:22px;}
+.cuenta{font-size:14px;color:var(--gris);}
+.cuenta b{color:var(--tinta);}
+.pasos{counter-reset:p;display:grid;gap:10px;margin-top:30px;}
+.pasos li{list-style:none;counter-increment:p;display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:start;font-size:15px;}
+.pasos li::before{content:counter(p);display:grid;place-items:center;width:42px;height:42px;border-radius:50%;font-weight:800;color:#1a0f33;background:var(--c,var(--quinto));}
+.pasos li:nth-child(1){--c:var(--fuego)}.pasos li:nth-child(2){--c:var(--aire)}.pasos li:nth-child(3){--c:var(--tierra)}
+.pasos b{display:block;font-size:16px;}
+
+/* Los cinco elementos: fichas y panel. La ficha elegida "entra" con @starting-style. */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 16px;}
+.chip{position:relative;isolation:isolate;font:600 14px var(--f);letter-spacing:.06em;color:var(--tinta);background:rgba(255,255,255,.06);
+  border:1.5px solid color-mix(in srgb,var(--c) 55%,transparent);border-radius:99px;padding:9px 16px;cursor:pointer;}
+.chip::before{content:"";position:absolute;inset:-1.5px;border-radius:inherit;background:var(--c);z-index:-1;opacity:0;scale:.6;transition:opacity .35s,scale .35s cubic-bezier(.3,1.4,.5,1);}
+.chip[aria-pressed="true"]{color:#14092a;color:contrast-color(var(--c));}
+.chip[aria-pressed="true"]::before{opacity:1;scale:1;}
+.chip:focus-visible{outline:2px solid #fff;outline-offset:3px;}
+.c-fuego{--c:var(--fuego)}.c-tierra{--c:var(--tierra)}.c-agua{--c:var(--agua)}.c-aire{--c:var(--aire)}.c-quinto{--c:var(--quinto)}
+.panel{display:grid;grid-template-columns:1fr;border-radius:24px;overflow:hidden;background:var(--noche-2);border:1px solid rgba(255,255,255,.08);}
+.panel img{width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;transition:opacity .4s, scale .6s;}
+.panel img.entra{opacity:1;scale:1;}
+@starting-style{ .panel img.entra{opacity:0;scale:1.06;} }
+.panel .txt{padding:20px 20px 24px;}
+.panel h3{font-weight:800;font-size:26px;letter-spacing:-.02em;color:var(--c);}
+.panel p{color:var(--gris);margin-top:6px;font-size:16px;}
+@media (min-width:800px){
+  .panel{grid-template-columns:1.5fr 1fr;align-items:center;}
+  .panel img{aspect-ratio:4/3;}
+  .panel .txt{padding:28px;}
+  .panel h3{font-size:34px;}
+}
+
+/* Show 2025: pasarela de fotos en movimiento (dos filas en sentidos opuestos). Cada fila lleva sus fotos
+   dos veces y corre la mitad de su ancho: el loop no se nota. Se frena con el mouse, con el visor abierto
+   y cuando no se ve. */
+.pasarela{display:grid;gap:10px;width:100vw;margin:22px 0 0 calc(50% - 50vw);overflow:hidden;   /* de borde a borde */
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);}
+.pista{display:flex;gap:10px;width:max-content;padding-right:10px;animation:desfile var(--dur,80s) linear infinite;will-change:transform;}
+.pista.der{animation-direction:reverse;}
+@keyframes desfile{to{transform:translateX(-50%);}}
+.pasarela:hover .pista,.pasarela.fuera .pista,.pasarela.viendo .pista{animation-play-state:paused;}
+.pista button{flex:none;border:0;padding:0;background:none;cursor:zoom-in;border-radius:16px;overflow:hidden;}
+.pista img{height:clamp(150px,24vw,230px);width:auto;aspect-ratio:3/2;object-fit:cover;transition:scale .5s;}
+.pista button:hover img{scale:1.05;}
+.pista button:focus-visible{outline:3px solid var(--quinto);outline-offset:-3px;}
+@media (prefers-reduced-motion:reduce){ .pasarela{overflow-x:auto;} .pista{animation:none;} }
+/* Videos: uno tras otro, en loop, como historias (rayitas arriba; tocar a los costados pasa de video). */
+.video-caja{display:grid;grid-template-columns:minmax(0,260px) 1fr;gap:20px;align-items:center;margin-top:30px;}
+.video-caja p{color:var(--gris);}
+.historias{position:relative;width:100%;aspect-ratio:9/16;border-radius:22px;overflow:hidden;background:#000;box-shadow:0 20px 50px rgba(0,0,0,.45);}
+.historias video{width:100%;height:100%;object-fit:cover;display:block;}
+.barras{position:absolute;top:10px;left:10px;right:10px;z-index:2;display:flex;gap:4px;pointer-events:none;}
+.barras span{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.35);overflow:hidden;}
+.barras i{display:block;height:100%;width:0;background:#fff;transition:width .25s linear;}
+.toque{position:absolute;top:0;bottom:0;width:38%;z-index:1;border:0;background:none;cursor:pointer;}
+.toque.ant{left:0;} .toque.sig{right:0;}
+.toque:focus-visible{outline:3px solid var(--quinto);outline-offset:-3px;}
+@media (max-width:560px){.video-caja{grid-template-columns:1fr;}.historias{max-width:280px;margin:0 auto;}}
+
+/* Ventanas (popover): entran desde el color de su elemento con @starting-style y salen suave en Chromium. */
+[popover]{margin:auto;border:0;color:var(--tinta);background:var(--noche-2);border-radius:24px;padding:24px 22px;width:min(92vw,520px);max-height:86svh;overflow:auto;
+  box-shadow:0 30px 80px rgba(0,0,0,.6);border-top:5px solid var(--c,var(--quinto));
+  transition:opacity .3s,translate .35s cubic-bezier(.2,.8,.2,1),display .35s allow-discrete,overlay .35s allow-discrete;}
+[popover]:popover-open{opacity:1;translate:0 0;}
+@starting-style{ [popover]:popover-open{opacity:0;translate:0 40px;} }
+[popover]:not(:popover-open){opacity:0;translate:0 24px;}
+[popover]::backdrop{background:rgba(10,5,22,.72);backdrop-filter:blur(3px);transition:opacity .3s,display .3s allow-discrete,overlay .3s allow-discrete;}
+[popover]:popover-open::backdrop{opacity:1;}
+@starting-style{ [popover]:popover-open::backdrop{opacity:0;} }
+[popover] h3{font-weight:800;font-size:22px;margin-bottom:8px;color:var(--c,var(--quinto));}
+[popover] p{color:var(--gris);margin-top:8px;}
+.cerrar{display:block;margin:18px 0 0 auto;font:700 14px var(--f);color:var(--tinta);background:rgba(255,255,255,.08);border:0;border-radius:99px;padding:9px 18px;cursor:pointer;}
+#visor{width:min(96vw,1100px);padding:10px;background:#000;border-top:0;}
+#visor img{width:100%;max-height:78svh;object-fit:contain;border-radius:16px;}
+.preguntas{display:grid;gap:8px;margin-top:20px;}
+.preguntas button{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;font:600 16px var(--f);color:var(--tinta);
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-left:4px solid var(--c,var(--quinto));border-radius:14px;padding:15px 16px;cursor:pointer;}
+.preguntas button::after{content:"+";font-weight:300;font-size:24px;line-height:1;color:var(--c,var(--quinto));}
+
+/* La escuela y el lugar */
+.escuela{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;}
+.escuela img{width:120px;border-radius:50%;}
+.cifras{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:22px;}
+.cifra{background:rgba(255,255,255,.04);border-radius:18px;padding:16px 12px;text-align:center;}
+.cifra b{display:block;font-weight:900;font-size:clamp(26px,7vw,40px);letter-spacing:-.03em;line-height:1;background:linear-gradient(90deg,var(--c1),var(--c2));
+  -webkit-background-clip:text;background-clip:text;color:transparent;}
+.cifra span{font-size:13px;color:var(--gris);}
+/* Redes de la escuela: íconos con los colores de cada marca */
+.redes{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+.red{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:var(--tinta);background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:8px 16px 8px 8px;transition:background .25s,translate .25s;}
+.red:hover{background:rgba(255,255,255,.12);translate:0 -2px;}
+.red:focus-visible{outline:3px solid var(--quinto);outline-offset:2px;}
+.red span{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;color:#fff;flex:none;}
+.red svg{width:24px;height:24px;}
+.red b{display:block;font-size:15px;line-height:1.1;}
+.red small{display:block;font-size:12px;color:var(--gris);}
+.red.ig span{background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fd5949 45%,#d6249f 60%,#285AEB 90%);}
+.red.tt span{background:#000;}
+.red.wa span{background:#25D366;}
+.red.tt svg{filter:drop-shadow(-1.5px -1px 0 #25f4ee) drop-shadow(1.5px 1px 0 #fe2c55);}
+.redes.chicas .red{padding:5px 13px 5px 5px;border-radius:12px;font-weight:600;font-size:14px;}
+.redes.chicas .red span{width:32px;height:32px;border-radius:9px;}
+.redes.chicas .red svg{width:18px;height:18px;}
+footer .redes{margin-top:4px;}
+.sedes{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px;}
+.sedes span{font-size:13px;border:1px solid rgba(255,255,255,.14);border-radius:99px;padding:5px 12px;color:var(--gris);}
+.lugar{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin-top:20px;}
+.lugar iframe{width:100%;height:300px;border:0;border-radius:20px;filter:saturate(.8) hue-rotate(-8deg);
+  background:var(--noche-2) url("assets/logo.webp") center/64px no-repeat;}
+.datos{display:grid;gap:10px;}
+.dato{background:rgba(255,255,255,.04);border-radius:16px;padding:14px 16px;}
+.dato small{display:block;font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--quinto);}
+.dato b{font-size:17px;}
+.links{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+.boton{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font:700 14px var(--f);color:var(--tinta);background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:10px 16px;cursor:pointer;}
+@media (max-width:720px){.lugar{grid-template-columns:1fr;}.escuela{grid-template-columns:1fr;}.escuela img{width:96px;}}
+
+/* Yo voy: tarjeta para los estados */
+.yovoy{margin-top:22px;display:grid;grid-template-columns:minmax(0,230px) 1fr;gap:22px;align-items:center;}
+.yovoy canvas,.yovoy img{width:100%;aspect-ratio:9/16;border-radius:20px;background:var(--noche-2);box-shadow:0 20px 50px rgba(0,0,0,.45);}
+.yovoy label{display:block;font-weight:600;font-size:14px;margin-bottom:6px;}
+.yovoy input{width:100%;font:500 17px var(--f);color:#1a0f33;background:#fbf7ff;border:2px solid transparent;border-radius:14px;padding:12px 14px;outline:none;}
+.yovoy input:focus{border-color:var(--quinto);}
+.yovoy .links{margin-top:12px;}
+@media (max-width:560px){.yovoy{grid-template-columns:1fr;}.yovoy canvas{max-width:240px;margin:0 auto;}}
+
+footer{margin-top:80px;padding:30px 0 120px;border-top:1px solid rgba(255,255,255,.08);color:var(--gris);font-size:14px;}
+footer .envase{display:grid;gap:8px;}
+
+/* Barra de compra fija en el celular, cuando la portada ya pasó */
+.barra{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:rgba(27,18,54,.94);backdrop-filter:blur(8px);border:1px solid rgba(207,168,242,.25);border-radius:999px;padding:8px 8px 8px 18px;
+  translate:0 140%;transition:translate .45s cubic-bezier(.2,.8,.2,1);}
+.barra.visible{translate:0 0;}
+.barra b{font-size:15px;}
+.barra small{display:block;font-size:11.5px;color:var(--gris);}
+.barra .comprar{padding:11px 18px;font-size:15px;}
+@media (min-width:900px){.barra{left:auto;width:420px;}}
+
+@media (min-width:900px){
+  .portada{grid-template-columns:1fr;}
+  .texto{padding:0 5vw;}
+  .abajo{padding-bottom:22px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important;}
+}
+</style>
+</head>
+<body>
+<!-- Íconos de las redes de la escuela (se usan con <use href="#i-ig">) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></symbol>
+  <symbol id="i-ig" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5.5" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="4.3" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="17.4" cy="6.6" r="1.35" fill="currentColor"/></symbol>
+  <symbol id="i-tt" viewBox="0 0 24 24"><path fill="currentColor" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></symbol>
+</svg>
+<a class="saltar" href="#entradas">Ir a las entradas</a>
+
+<header class="portada" id="portada">
+  <figure class="banda fuego" aria-hidden="true"><img src="assets/fotos/el-fuego-700.webp" srcset="assets/fotos/el-fuego-700.webp 700w, assets/fotos/el-fuego-1400.webp 1400w" sizes="100vw" alt="" fetchpriority="high"><span class="rotulo"><b>01</b>Fuego</span></figure>
+  <figure class="banda aire" aria-hidden="true"><img src="assets/fotos/el-aire-700.webp" srcset="assets/fotos/el-aire-700.webp 700w, assets/fotos/el-aire-1400.webp 1400w" sizes="100vw" alt=""><span class="rotulo"><b>02</b>Aire</span></figure>
+  <figure class="banda tierra" aria-hidden="true"><img src="assets/fotos/el-tierra-700.webp" srcset="assets/fotos/el-tierra-700.webp 700w, assets/fotos/el-tierra-1400.webp 1400w" sizes="100vw" alt=""><span class="rotulo"><b>03</b>Tierra</span></figure>
+  <figure class="banda agua" aria-hidden="true"><img src="assets/fotos/el-agua-700.webp" srcset="assets/fotos/el-agua-700.webp 700w, assets/fotos/el-agua-1400.webp 1400w" sizes="100vw" alt=""><span class="rotulo"><b>04</b>Agua</span></figure>
+
+  <div class="texto">
+    <p class="show" aria-hidden="true">show<span>’26</span></p>
+    <h1 aria-label="El Quinto Elemento"><span class="fino" aria-hidden="true">El Quinto</span><span class="grueso" aria-hidden="true"><span>E</span><span>L</span><span>E</span><span>M</span><span>E</span><span>N</span><span>T</span><span>O</span></span></h1>
+    <p class="cuando"><b>13 DIC · 17 h</b><span>Treinta y Tres Orientales 1182 · Boedo</span></p>
+    <div class="abajo">
+      <a class="comprar" id="btn-portada" href="#entradas">Entradas<small id="precio-portada">Escuela Patín Artístico F.A.</small></a>
+      <img class="logo" src="assets/logo.webp" width="110" height="110" alt="Escuela Patín Artístico F.A.">
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ENTRADAS -->
+  <section class="bloque" id="entradas">
+    <div class="envase">
+      <p class="antetitulo">Domingo 13 de diciembre · 17 h</p>
+      <h2>Entradas <em>con QR</em></h2>
+      <p class="bajada">Comprás online, pagás por transferencia y el QR te llega al mail al instante. Cuanto antes, mejor precio.</p>
+
+      <div class="etapas" id="etapas" aria-live="polite">
+        <div class="hoy-marca" aria-hidden="true"></div>
+        <div class="etapa"><small>Cargando</small><b>…</b><span>precios</span></div>
+      </div>
+
+      <div class="reglas">
+        <p class="regla"><i aria-hidden="true">🪪</i><span><b>Pagan entrada desde los 11 años.</b> Presentarse con DNI.</span></p>
+        <p class="regla"><i aria-hidden="true">🛼</i><span><b>Las y los patinadores del show no pagan entrada.</b></span></p>
+        <p class="regla"><i aria-hidden="true">🏦</i><span>Transferí desde <b>una cuenta a tu nombre</b> (la del DNI que cargás): así el pago se reconoce solo.</span></p>
+      </div>
+
+      <div class="seguro">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p><b>Comprá solo en esta página.</b> Es la única venta oficial de entradas anticipadas (el domingo también se venden en la puerta).
+          Para mandarte el QR te pedimos solo tu nombre, tu DNI y tu mail: nunca te vamos a pedir claves, códigos ni datos de tu banco o tu tarjeta.</p>
+      </div>
+
+      <div class="accion">
+        <a class="comprar grande apagado" id="btn-entradas" href="#entradas" aria-disabled="true">Entradas muy pronto<small>Seguinos en @patin_fa</small></a>
+        <p class="cuenta" id="cuenta"></p>
+      </div>
+
+      <ol class="pasos">
+        <li><span><b>Elegís cuántas</b>Hasta 10 por compra, con tu nombre, DNI y mail.</span></li>
+        <li><span><b>Transferís</b>Te damos un CVU para esa compra. Podés pagar desde tu banco o tu billetera virtual.</span></li>
+        <li><span><b>Te llega el QR</b>Al mail, al instante. El domingo lo mostrás en la puerta desde el celular.</span></li>
+      </ol>
+
+      <div class="preguntas">
+        <button popovertarget="p-quien" style="--c:var(--fuego)">¿Quiénes pagan entrada?</button>
+        <button popovertarget="p-cuenta" style="--c:var(--aire)">¿Y si transfiero desde otra cuenta?</button>
+        <button popovertarget="p-puerta" style="--c:var(--tierra)">¿Se puede comprar en la puerta?</button>
+        <button popovertarget="p-mail" style="--c:var(--agua)">No me llegó el mail</button>
+      </div>
+      <div class="redes" data-wa-caja hidden>
+        <a class="red wa" data-wa target="_blank" rel="noopener" aria-label="Consultas por WhatsApp"><span><svg aria-hidden="true"><use href="#i-wa"/></svg></span><div><b>¿Otra consulta?</b><small>Escribinos por WhatsApp</small></div></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOS CINCO ELEMENTOS -->
+  <section class="bloque" id="elementos">
+    <div class="envase">
+      <p class="antetitulo">Show ’26</p>
+      <h2>Cuatro elementos <em>y uno más</em></h2>
+      <div class="chips" role="group" aria-label="Elegí un elemento">
+        <button class="chip c-fuego" data-el="fuego" aria-pressed="true">Fuego</button>
+        <button class="chip c-aire" data-el="aire" aria-pressed="false">Aire</button>
+        <button class="chip c-tierra" data-el="tierra" aria-pressed="false">Tierra</button>
+        <button class="chip c-agua" data-el="agua" aria-pressed="false">Agua</button>
+        <button class="chip c-quinto" data-el="quinto" aria-pressed="false">El quinto</button>
+      </div>
+      <div class="panel" id="panel" style="--c:var(--fuego)">
+        <img class="entra" id="panel-img" src="assets/fotos/el-fuego-700.webp" alt="Patinadoras de la escuela en el show 2025" width="700" height="467" loading="lazy">
+        <div class="txt"><h3 id="panel-tit">Fuego</h3><p id="panel-txt">La pasión que se enciende cuando suena la música y se apagan las luces.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHOW 2025 -->
+  <section class="bloque" id="galeria">
+    <div class="envase">
+      <p class="antetitulo">Así se vivió el show 2025</p>
+      <h2>Lo que pasa <em>en la pista</em></h2>
+      <p class="bajada">Nervios, maquillaje, abrazos y aplausos. Tocá una foto para verla grande.</p>
+      <div class="pasarela" id="pasarela" role="group" aria-label="Fotos del show 2025"></div>
+      <div class="video-caja">
+        <div class="historias" id="historias">
+          <div class="barras" aria-hidden="true"></div>
+          <video id="video" muted playsinline preload="none" poster="assets/video/show25.webp" aria-label="Videos del show 2025"></video>
+          <button type="button" class="toque ant" aria-label="Video anterior"></button>
+          <button type="button" class="toque sig" aria-label="Video siguiente"></button>
+        </div>
+        <div>
+          <h3 style="font-weight:800;font-size:24px;">Un domingo en ocho ruedas</h3>
+          <p>200 patinadoras de las cinco sedes de la escuela, en una misma pista. Este año, el show se llama El Quinto Elemento.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LA ESCUELA -->
+  <section class="bloque" id="escuela">
+    <div class="envase">
+      <div class="escuela">
+        <img src="assets/logo.webp" width="120" height="120" alt="Logo de la Escuela Patín Artístico F.A." loading="lazy">
+        <div>
+          <p class="antetitulo">Organiza</p>
+          <h2 style="margin-bottom:6px;">Escuela Patín Artístico F.A.</h2>
+          <div class="redes">
+            <a class="red ig" href="https://www.instagram.com/patin_fa" target="_blank" rel="noopener" aria-label="Instagram de la escuela (@patin_fa)"><span><svg aria-hidden="true"><use href="#i-ig"/></svg></span><b>@patin_fa</b><small>Instagram</small></a>
+            <a class="red tt" href="https://www.tiktok.com/@patin_fa" target="_blank" rel="noopener" aria-label="TikTok de la escuela (@patin_fa)"><span><svg aria-hidden="true"><use href="#i-tt"/></svg></span><b>@patin_fa</b><small>TikTok</small></a>
+          </div>
+        </div>
+      </div>
+      <div class="cifras">
+        <div class="cifra" style="--c1:var(--fuego);--c2:var(--aire)"><b>200</b><span>patinadoras</span></div>
+        <div class="cifra" style="--c1:var(--tierra);--c2:var(--agua)"><b>5</b><span>sedes en CABA</span></div>
+      </div>
+      <div class="sedes">
+        <span>Floresta · Club Nueva Generación</span><span>Boedo · Club Nueva Generación</span><span>Nueva Pompeya · Club San Jorge</span>
+        <span>San Cristóbal · Instituto San Cristóbal</span><span>Mataderos · Inst. Ntra. Sra. de la Misericordia</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- LUGAR -->
+  <section class="bloque" id="lugar">
+    <div class="envase">
+      <p class="antetitulo">Cómo llegar</p>
+      <h2>Boedo, <em>CABA</em></h2>
+      <div class="lugar">
+        <div class="datos">
+          <div class="dato"><small>Dirección</small><b>Treinta y Tres Orientales 1182</b><br>esquina Constitución, Boedo</div>
+          <div class="dato"><small>Horarios</small><b>Puertas 16 h · Show 17 h</b><br>Domingo 13 de diciembre</div>
+          <div class="links">
+            <a class="boton" id="ir-mapa" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Treinta%20y%20Tres%20Orientales%201182%2C%20Boedo%2C%20CABA">📍 Abrir en el mapa</a>
+            <a class="boton" target="_blank" rel="noopener" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=El%20Quinto%20Elemento%20%C2%B7%20Show%20%E2%80%9926%20(Pat%C3%ADn%20F.A.)&dates=20261213T200000Z/20261213T230000Z&location=Treinta%20y%20Tres%20Orientales%201182%2C%20Boedo%2C%20CABA&details=Puertas%2016%20h%20%C2%B7%20Show%2017%20h">🗓️ Agendar</a>
+          </div>
+        </div>
+        <iframe id="mapa" title="Mapa: Treinta y Tres Orientales 1182, Boedo" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+          data-src="https://www.google.com/maps?output=embed&q=Treinta%20y%20Tres%20Orientales%201182%2C%20Boedo%2C%20CABA"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- YO VOY -->
+  <section class="bloque" id="yovoy">
+    <div class="envase">
+      <p class="antetitulo">Para tus estados</p>
+      <h2>Yo voy <em>al show</em></h2>
+      <p class="bajada">Armá tu tarjeta y subila a tus estados de WhatsApp o a tus historias. Si querés, poné a quién vas a ver patinar.</p>
+      <div class="yovoy">
+        <canvas id="tarjeta" width="1080" height="1920" aria-label="Vista previa de la tarjeta Yo voy"></canvas>
+        <div>
+          <label for="yv-nombre">¿A quién vas a ver? (opcional)</label>
+          <input id="yv-nombre" maxlength="22" placeholder="Ej.: a Sofi" autocomplete="off">
+          <div class="links">
+            <button class="comprar" id="yv-compartir" type="button">Compartir tarjeta</button>
+            <a class="boton" id="yv-bajar" download="yo-voy-el-quinto-elemento.png" href="#">Descargar</a>
+          </div>
+          <p class="cuenta" id="yv-aviso" style="margin-top:10px;"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="envase">
+    <b style="color:var(--tinta)">El Quinto Elemento · Show ’26</b>
+    <span>Organiza la Escuela Patín Artístico F.A.</span>
+    <div class="redes chicas">
+      <a class="red ig" href="https://www.instagram.com/patin_fa" target="_blank" rel="noopener" aria-label="Instagram de la escuela (@patin_fa)"><span><svg aria-hidden="true"><use href="#i-ig"/></svg></span>Instagram</a>
+      <a class="red tt" href="https://www.tiktok.com/@patin_fa" target="_blank" rel="noopener" aria-label="TikTok de la escuela (@patin_fa)"><span><svg aria-hidden="true"><use href="#i-tt"/></svg></span>TikTok</a>
+      <a class="red wa" data-wa hidden target="_blank" rel="noopener" aria-label="Consultas por WhatsApp"><span><svg aria-hidden="true"><use href="#i-wa"/></svg></span>Consultas</a>
+    </div>
+    <span>Las entradas se venden solo en esta página. <a id="recuperar" href="/mis-entradas">¿Ya compraste? Recuperá tus entradas</a></span>
+  </div>
+</footer>
+
+<div class="barra" id="barra" aria-hidden="true">
+  <span><b>El Quinto Elemento</b><small id="barra-precio">Dom 13 dic · 17 h</small></span>
+  <a class="comprar" id="btn-barra" href="#entradas" tabindex="-1">Comprar</a>
+</div>
+
+<!-- Ventanas -->
+<div popover id="p-quien" style="--c:var(--fuego)"><h3>¿Quiénes pagan entrada?</h3>
+  <p>Pagan entrada desde los 11 años. Presentarse con DNI.</p>
+  <p>Las y los patinadores que se presentan en el show tampoco pagan entrada.</p>
+  <button class="cerrar" popovertarget="p-quien" popovertargetaction="hide">Entendido</button></div>
+<div popover id="p-cuenta" style="--c:var(--aire)"><h3>¿Y si transfiero desde otra cuenta?</h3>
+  <p>El pago se reconoce solo cuando la cuenta que transfiere es del mismo DNI que cargaste. Si pagás desde otra cuenta (la de un familiar, por ejemplo), la plata llega igual, pero la entrada no sale sola: la escuela la asigna a mano y puede demorar.</p>
+  <p>Lo más fácil: cargá el DNI del titular de la cuenta con la que vas a pagar.</p>
+  <p data-wa-caja hidden>Si ya pagaste desde otra cuenta, <a data-wa target="_blank" rel="noopener">escribinos por WhatsApp</a> con el comprobante.</p>
+  <button class="cerrar" popovertarget="p-cuenta" popovertargetaction="hide">Entendido</button></div>
+<div popover id="p-puerta" style="--c:var(--tierra)"><h3>¿Se puede comprar en la puerta?</h3>
+  <p id="p-puerta-txt">Sí, el domingo en la puerta, al precio del día. Online es más barato y te ahorrás la fila.</p>
+  <button class="cerrar" popovertarget="p-puerta" popovertargetaction="hide">Entendido</button></div>
+<div popover id="p-mail" style="--c:var(--agua)"><h3>No me llegó el mail</h3>
+  <p>Revisá en "Spam" o "Promociones". También podés recuperar tus entradas con tu mail y tu DNI en <a href="/mis-entradas">Mis entradas</a>.</p>
+  <p data-wa-caja hidden>¿Tampoco aparecen? <a data-wa target="_blank" rel="noopener">Escribinos por WhatsApp</a>.</p>
+  <button class="cerrar" popovertarget="p-mail" popovertargetaction="hide">Entendido</button></div>
+<div popover id="visor" aria-label="Foto del show 2025"><img id="visor-img" alt=""><button class="cerrar" type="button" commandfor="visor" command="hide-popover">Cerrar</button></div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const pesos = n => '$' + Number(n).toLocaleString('es-AR');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const hoyAR = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
+const diasEntre = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
+const dm = f => { const d = new Date(f + 'T12:00:00Z'); return `${DIAS[d.getUTCDay()]} ${d.getUTCDate()}/${d.getUTCMonth() + 1}`; };
+
+// Botones "Cerrar" con commandfor: donde el navegador todavía no lo entiende, lo hace este código.
+if (!('command' in HTMLButtonElement.prototype)) $$('button[commandfor]').forEach(b => b.addEventListener('click', () => {
+  const p = document.getElementById(b.getAttribute('commandfor')); try { p.hidePopover(); } catch {}
+}));
+
+// ───── Precios (de /api/config) ─────
+// VISTA PREVIA (copia publicada sin el sistema, herramientas/vista-previa.mjs): los precios vienen de una
+// copia de /api/config, la etapa de hoy se recalcula acá y los botones no venden.
+const PREVIA = window.VISTA_PREVIA || null;
+if (PREVIA) {
+  document.body.insertAdjacentHTML('beforeend', `<div popover id="p-previa"><h3>Vista previa</h3>
+    <p>Así se va a ver la página. La compra con QR se habilita cuando abra la venta.</p>
+    <button class="cerrar" popovertarget="p-previa" popovertargetaction="hide">Entendido</button></div>
+    <p style="position:fixed;top:10px;right:10px;z-index:30;margin:0;font:800 10px var(--f);letter-spacing:.2em;color:#1a0f33;background:var(--quinto);padding:5px 10px;border-radius:99px;">VISTA PREVIA</p>`);
+  $('#recuperar').hidden = true;
+}
+(PREVIA ? Promise.resolve(PREVIA) : fetch('/api/config').then(r => r.json())).then(c => {
+  // WhatsApp de consultas (sitio.json → ayudaWhatsapp): sin número, no se muestra nada.
+  const wa = c.sitio?.ayudaWhatsapp;
+  if (wa) for (const a of document.querySelectorAll('[data-wa]')) {
+    a.href = `https://wa.me/${encodeURIComponent(wa)}?text=${encodeURIComponent('Hola, tengo una consulta sobre las entradas de El Quinto Elemento.')}`;
+    a.hidden = false; const caja = a.closest('[data-wa-caja]'); if (caja) caja.hidden = false;
+  }
+  const e = c.eventos?.[0];
+  if (!e) return;
+  if (PREVIA) {
+    const dia = hoyAR();
+    for (const x of Object.values(e.tipos)) if (x.etapas) {
+      const i = x.etapas.findIndex(s => dia <= s.hasta);
+      x.etapas.forEach((s, k) => { s.vigente = k === i; s.paso = i === -1 || k < i; });
+      x.final = i === -1 ? x.finalDespues : x.etapas[i].final;
+    }
+    e.vendible = !e.ventaHasta || dia <= e.ventaHasta;
+  }
+  const t = Object.values(e.tipos)[0], idTipo = Object.keys(e.tipos)[0];
+  const hoy = hoyAR();
+  // Calendario: las etapas online + la puerta.
+  const filas = (t.etapas || []).map(x => ({ rotulo: x.nombre || ('Hasta el ' + dm(x.hasta)), precio: x.final, nota: 'hasta el ' + dm(x.hasta), vigente: x.vigente && e.vendible, paso: x.paso }));
+  const cerroOnline = e.ventaHasta && hoy > e.ventaHasta;
+  filas.push({ rotulo: 'En puerta', precio: t.finalDespues ?? t.final, nota: 'domingo 13/12', vigente: cerroOnline, paso: false });
+  $('#etapas').innerHTML = '<div class="hoy-marca" aria-hidden="true"></div>' + filas.map(f =>
+    `<div class="etapa${f.vigente ? ' vigente' : ''}${f.paso ? ' paso' : ''}"><small>${esc(f.rotulo)}</small><b>${pesos(f.precio)}</b><span>${esc(f.nota)}</span></div>`).join('');
+  if (!filas.some(f => f.vigente)) $('.hoy-marca').hidden = true;
+  $('#p-puerta-txt').textContent = `Sí: el domingo en la puerta cuesta ${pesos(t.finalDespues ?? t.final)}. Online es más barato y te ahorrás la fila. La venta online cierra el ${dm(e.ventaHasta || e.fecha)}.`;
+
+  const actual = (t.etapas || []).find(x => x.vigente);
+  if (e.vendible) {
+    const url = `/comprar?evento=${encodeURIComponent(e.id)}&tipo=${encodeURIComponent(idTipo)}`;
+    const b = $('#btn-entradas');
+    b.classList.remove('apagado'); b.removeAttribute('aria-disabled'); b.href = url;
+    b.innerHTML = `Comprar entradas<small>${pesos(t.final)} cada una</small>`;
+    $('#btn-portada').href = url; $('#btn-portada').innerHTML = `Comprar entradas<small>${pesos(t.final)} · hasta el ${dm(actual?.hasta || e.ventaHasta || e.fecha)}</small>`;
+    $('#btn-barra').href = url; $('#barra-precio').textContent = `${pesos(t.final)} · Dom 13 dic · 17 h`;
+    $('#barra').dataset.activa = '1';
+    if (PREVIA) for (const a of [b, $('#btn-portada'), $('#btn-barra')]) {
+      a.href = '#entradas';
+      a.addEventListener('click', ev => { ev.preventDefault(); try { $('#p-previa').showPopover(); } catch {} });
+    }
+    if (actual) {
+      const quedan = diasEntre(hoy, actual.hasta);
+      const sig = (t.etapas || [])[t.etapas.indexOf(actual) + 1];
+      const despues = sig ? sig.final : (t.finalDespues ?? t.final);
+      $('#cuenta').innerHTML = quedan <= 0 ? `<b>Hoy es el último día a ${pesos(t.final)}.</b> Mañana pasa a ${pesos(despues)}.`
+        : `A ${pesos(t.final)} hasta el ${dm(actual.hasta)}: <b>${quedan === 1 ? 'queda 1 día' : `quedan ${quedan} días`}</b>. Después, ${pesos(despues)}.`;
+    }
+  } else if (cerroOnline) {
+    $('#btn-entradas').innerHTML = `Venta online cerrada<small>En puerta: ${pesos(t.finalDespues ?? t.final)}</small>`;
+    $('#precio-portada').textContent = `En puerta: ${pesos(t.finalDespues ?? t.final)}`;
+  }
+}).catch(() => { $('#etapas').innerHTML = '<p class="bajada">No pudimos cargar los precios. Recargá la página.</p>'; });
+if (!PREVIA) fetch('/api/visita', { method: 'POST' }).catch(() => {});
+
+// ───── Portada: la ola del agua solo se mueve cuando se ve; la barra aparece cuando la portada pasó ─────
+new IntersectionObserver(([en]) => {
+  $('#portada').classList.toggle('quieta', !en.isIntersecting);
+  const barra = $('#barra'), ver = !en.isIntersecting && barra.dataset.activa === '1';
+  barra.classList.toggle('visible', ver); barra.setAttribute('aria-hidden', String(!ver)); $('#btn-barra').tabIndex = ver ? 0 : -1;
+}, { threshold: 0.05 }).observe($('#portada'));
+
+// ───── Los cinco elementos ─────
+const ELEMENTOS = {
+  fuego:  ['Fuego', 'La pasión que se enciende cuando suena la música y se apagan las luces.'],
+  tierra: ['Tierra', 'La base: horas de entrenamiento, técnica y equilibrio sobre ocho ruedas.'],
+  agua:   ['Agua', 'La fluidez de cada deslizamiento, de cada curva y de cada giro.'],
+  aire:   ['Aire', 'Saltos, giros y ese segundo en que parece que vuelan.'],
+  quinto: ['¿Y el quinto?', 'Lo descubrís el domingo 13 de diciembre, en la pista.'],
+};
+$$('.chip').forEach(ch => ch.addEventListener('click', () => {
+  const el = ch.dataset.el, [tit, txt] = ELEMENTOS[el];
+  $$('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === ch)));
+  const panel = $('#panel'), img = $('#panel-img');
+  panel.style.setProperty('--c', `var(--${el})`);
+  img.classList.remove('entra'); void img.offsetWidth;   // vuelve a correr la entrada (@starting-style)
+  img.src = `assets/fotos/el-${el}-700.webp`; img.classList.add('entra');
+  $('#panel-tit').textContent = tit; $('#panel-txt').textContent = txt;
+}));
+
+// ───── Show 2025: pasarela con las 26 fotos (dos filas) y visor ─────
+const FOTOS = ['018', '007', '042', '001', '075', '111', '136', '040', '180', '185', '254', '057', '256', '294', '305',
+  '063', '065', '087', '092', '140', '150', '189', '243', '271', '281', '300'];
+const filas = [FOTOS.filter((_, i) => i % 2 === 0), FOTOS.filter((_, i) => i % 2 === 1)];
+const foto = (n, copia) => `<button type="button" data-n="${n}"${copia ? ' aria-hidden="true" tabindex="-1"' : ' aria-label="Ver foto grande"'}>`
+  + `<img src="assets/fotos/show25-${n}-600.webp" width="600" height="400" alt="" loading="lazy" decoding="async"></button>`;
+$('#pasarela').innerHTML = filas.map((f, i) => `<div class="pista${i ? ' der' : ''}" style="--dur:${f.length * 7}s">`
+  + f.map(n => foto(n)).join('') + f.map(n => foto(n, true)).join('') + '</div>').join('');
+$('#pasarela').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-n]'); if (!b) return;
+  $('#visor-img').src = `assets/fotos/show25-${b.dataset.n}-1200.webp`;
+  $('#visor-img').alt = 'Foto del show 2025 de la escuela';
+  try { $('#visor').showPopover(); } catch {}
+});
+$('#visor').addEventListener('toggle', ev => $('#pasarela').classList.toggle('viendo', ev.newState === 'open'));
+new IntersectionObserver(([en]) => $('#pasarela').classList.toggle('fuera', !en.isIntersecting)).observe($('#pasarela'));
+
+// Videos: uno tras otro y en loop, como historias. Arrancan solos (sin sonido) cuando se ven y se frenan al salir.
+const CLIPS = ['show25', 'show25-2', 'show25-3'].map(n => ({ src: `assets/video/${n}.mp4`, poster: `assets/video/${n}.webp` }));
+const video = $('#video'), barras = $('#historias .barras'), quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+barras.innerHTML = CLIPS.map(() => '<span><i></i></span>').join('');
+let clip = 0, enPantalla = false;
+function ponerClip(i, reproducir) {
+  clip = (i + CLIPS.length) % CLIPS.length;
+  video.poster = CLIPS[clip].poster; video.src = CLIPS[clip].src;
+  [...barras.children].forEach((b, k) => { b.firstChild.style.width = k < clip ? '100%' : '0%'; });
+  if (reproducir) video.play().catch(() => {});
+}
+video.addEventListener('timeupdate', () => { if (video.duration) barras.children[clip].firstChild.style.width = (video.currentTime / video.duration * 100) + '%'; });
+video.addEventListener('ended', () => ponerClip(clip + 1, enPantalla));
+$('#historias .ant').addEventListener('click', () => ponerClip(clip - 1, true));
+$('#historias .sig').addEventListener('click', () => ponerClip(clip + 1, true));
+new IntersectionObserver(([en]) => {
+  enPantalla = en.isIntersecting;
+  if (!enPantalla) return video.pause();
+  if (quieto) return;
+  if (!video.getAttribute('src')) ponerClip(clip, true); else video.play().catch(() => {});
+}, { threshold: 0.4 }).observe(video);
+// El mapa se carga cuando se acerca (no en la primera visita a la portada).
+new IntersectionObserver(([en], o) => { if (en.isIntersecting) { $('#mapa').src = $('#mapa').dataset.src; o.disconnect(); } }, { rootMargin: '300px' }).observe($('#mapa'));
+
+// ───── Yo voy: tarjeta 1080×1920 con las cuatro bandas ─────
+const lienzo = $('#tarjeta'), cx = lienzo.getContext('2d');
+const cargar = src => new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = src; });
+let fotosYV = null;
+function redondeado(x, y, w, h, r) { cx.beginPath(); cx.roundRect ? cx.roundRect(x, y, w, h, r) : cx.rect(x, y, w, h); }
+function cubrir(img, x, y, w, h, py = .4) {
+  const k = Math.max(w / img.width, h / img.height), sw = w / k, sh = h / k;
+  cx.drawImage(img, (img.width - sw) / 2, (img.height - sh) * py, sw, sh, x, y, w, h);
+}
+async function dibujar() {
+  if (!fotosYV) {
+    await Promise.all(['300 80px Poppins', '400 80px Poppins', '900 80px Poppins'].map(f => document.fonts.load(f)));
+    fotosYV = await Promise.all(['fuego', 'aire', 'tierra', 'agua'].map(n => cargar(`assets/fotos/el-${n}-700.webp`)));
+  }
+  const W = 1080, H = 1920, m = 48, g = 18, bh = 300;
+  cx.fillStyle = '#120b24'; cx.fillRect(0, 0, W, H);
+  fotosYV.forEach((img, i) => { cx.save(); redondeado(m, m + i * (bh + g), W - 2 * m, bh, 34); cx.clip(); cubrir(img, m, m + i * (bh + g), W - 2 * m, bh); cx.restore(); });
+  cx.fillStyle = '#fff'; cx.textBaseline = 'alphabetic'; cx.shadowColor = 'rgba(18,11,36,.45)'; cx.shadowBlur = 30;
+  cx.textAlign = 'right'; cx.font = '300 110px Poppins'; cx.fillText('show’26', W - 80, m + bh - 30);
+  cx.textAlign = 'left'; cx.font = '400 168px Poppins'; cx.fillText('EL QUINTO', 66, m + bh + 150);
+  cx.font = '900 176px Poppins'; cx.fillText('ELEMENTO', 58, m + 2 * (bh + g) + 30);
+  cx.textAlign = 'right'; cx.font = '800 92px Poppins'; cx.fillText('13 DIC · 17 h', W - 80, m + 3 * (bh + g) - 40);
+  cx.font = '400 44px Poppins'; cx.fillText('Treinta y Tres Orientales 1182 · Boedo', W - 80, m + 3 * (bh + g) + 20);
+  cx.shadowBlur = 0;
+  const y0 = m + 4 * (bh + g) + 40;
+  const grad = cx.createLinearGradient(80, 0, W - 80, 0);
+  ['#ff4a3d', '#ffc53d', '#4cd98a', '#5b9cff', '#cfa8f2'].forEach((c, i) => grad.addColorStop(i / 4, c));
+  cx.fillStyle = grad; cx.textAlign = 'center'; cx.font = '900 210px Poppins'; cx.fillText('YO VOY', W / 2, y0 + 190);
+  const nombre = $('#yv-nombre').value.trim().slice(0, 22);
+  cx.fillStyle = '#f7f2fc'; cx.font = '400 62px Poppins';
+  if (nombre) cx.fillText(/^a\s/i.test(nombre) ? `a ver ${nombre}` : `a ver a ${nombre}`, W / 2, y0 + 290);
+  cx.fillStyle = '#bcb1d6'; cx.font = '600 38px Poppins'; cx.fillText('ESCUELA PATÍN ARTÍSTICO F.A. · @patin_fa', W / 2, H - 130);
+  cx.font = '400 36px Poppins'; cx.fillText('Entradas: ' + location.host, W / 2, H - 80);
+}
+let pausaYV;
+$('#yv-nombre').addEventListener('input', () => { clearTimeout(pausaYV); pausaYV = setTimeout(dibujar, 250); });
+new IntersectionObserver(([en], o) => { if (en.isIntersecting) { dibujar().catch(() => {}); o.disconnect(); } }, { rootMargin: '400px' }).observe(lienzo);
+const archivoYV = () => new Promise(ok => lienzo.toBlob(b => ok(new File([b], 'yo-voy-el-quinto-elemento.png', { type: 'image/png' })), 'image/png'));
+$('#yv-compartir').addEventListener('click', async () => {
+  await dibujar();
+  const f = await archivoYV();
+  if (navigator.canShare?.({ files: [f] })) {
+    try { await navigator.share({ files: [f], text: `Yo voy a El Quinto Elemento 🛼 Entradas: ${location.origin}` }); } catch {}
+  } else {
+    const a = $('#yv-bajar'); a.href = URL.createObjectURL(f); a.click();
+    $('#yv-aviso').textContent = 'Listo: se descargó la imagen. Subila a tus estados desde la galería.';
+  }
+});
+$('#yv-bajar').addEventListener('click', async ev => {
+  if (ev.currentTarget.href.startsWith('blob:')) return;
+  ev.preventDefault(); await dibujar();
+  const a = ev.currentTarget; a.href = URL.createObjectURL(await archivoYV()); a.click();
+});
+</script>
+</body>
+</html>

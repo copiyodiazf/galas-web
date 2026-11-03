@@ -1,0 +1,12 @@
+/* Tema de Patio Lo de O-Li: verdes del árbol del logo y luces cálidas de peña. */
+:root{
+  --noche:#0d1d12; --noche-2:#14301c; --noche-3:#1c3f26; --oro:#f0b54a; --oro-vivo:#ffd27a; --crema:#f4f1e6;
+  --gris:#b5c3ad; --tierra:#7a5230;
+  --oro-degrade:linear-gradient(180deg,#ffe6a8 0%,#f0b54a 55%,#b9781e 100%);
+  --portada-fondo:radial-gradient(ellipse 80% 60% at 50% 12%,#2e6b33,#0d1d12 72%);
+}
+body{background:radial-gradient(ellipse 90% 50% at 50% 0%,rgba(64,140,64,.32),transparent 70%),
+                radial-gradient(ellipse 70% 40% at 50% 100%,rgba(240,181,74,.14),transparent 70%),var(--noche);}
+.tarjeta{background:linear-gradient(180deg,rgba(28,63,38,.92),rgba(20,48,28,.92));border-color:rgba(240,181,74,.22);}
+th{background:rgba(20,48,28,.97) !important;}
+.portada img.logo{border-color:#7cc24f;}

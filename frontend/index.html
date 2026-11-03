@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- El servidor reemplaza las marcas NOMBRE, DESCRIPCION y URL (entre dobles porcentajes) con los datos de sitio.json:
+     así la vista previa de WhatsApp sale bien. -->
+<title>%%NOMBRE%%</title>
+<meta name="description" content="%%DESCRIPCION%%">
+<meta property="og:type" content="website">
+<meta property="og:title" content="%%NOMBRE%%">
+<meta property="og:description" content="%%DESCRIPCION%%">
+<meta property="og:url" content="%%URL%%/">
+<meta property="og:image" content="%%URL%%/assets/compartir.jpg">
+<meta name="theme-color" content="#141022">
+<link rel="icon" href="assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sistema.css">
+<link rel="stylesheet" href="/tema.css">
+<style>
+body{background:var(--noche);}
+.portada{position:relative;min-height:82vh;display:flex;align-items:flex-end;padding:0 16px 56px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,.45) 55%,var(--noche) 100%),var(--foto,none) center/cover no-repeat,var(--portada-fondo,radial-gradient(ellipse 80% 60% at 50% 20%,#4a2d66,#141022 75%));}
+.portada .dentro{max-width:880px;margin:0 auto;width:100%;text-align:center;}
+.portada img.logo{width:130px;height:130px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.45);border:3px solid var(--oro);}
+.portada .organiza{margin-top:16px;font-weight:800;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--oro);}
+.portada h1{font-size:clamp(38px,9vw,74px);margin-top:10px;text-shadow:0 6px 30px rgba(0,0,0,.5);}
+.portada .cuando{margin-top:12px;font-size:clamp(16px,3.6vw,20px);font-weight:600;}
+.portada .lugar{color:var(--gris);margin-top:4px;}
+.portada .btn{max-width:340px;margin-top:26px;}
+.cuenta{display:flex;justify-content:center;gap:10px;margin-top:22px;}
+.cuenta div{min-width:66px;background:rgba(246,240,230,.07);border:1px solid rgba(231,194,125,.25);border-radius:14px;padding:8px 6px;}
+.cuenta b{display:block;font-family:var(--f-display);font-size:28px;line-height:1.1;}
+.cuenta small{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);}
+.seccion{max-width:960px;margin:0 auto;padding:56px 16px 0;}
+.seccion h2{font-family:var(--f-display);font-size:clamp(28px,6vw,40px);text-align:center;}
+.seccion .sub{text-align:center;color:var(--gris);margin-top:6px;}
+/* Cartelera */
+.cartelera{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-top:26px;}
+.pena{background:var(--noche-2);border:1px solid rgba(231,194,125,.22);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;}
+.pena .foto{position:relative;aspect-ratio:4/5;background:var(--portada-fondo,linear-gradient(160deg,#3a2a52,#141022));display:flex;align-items:center;justify-content:center;}
+.pena .foto img{width:100%;height:100%;object-fit:cover;display:block;}
+.pena .foto .sin img{width:96px;height:96px;border-radius:50%;object-fit:cover;opacity:.9;box-shadow:0 8px 24px rgba(0,0,0,.35);}
+.pena .foto.sin-foto{aspect-ratio:16/9;}   /* sin flyer todavía: un recuadro bajo, no un hueco alto */
+.pena .dia{position:absolute;top:12px;left:12px;background:var(--oro);color:#1d1830;border-radius:14px;padding:6px 10px;text-align:center;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.35);}
+.pena .dia b{display:block;font-family:var(--f-display);font-size:28px;}
+.pena .dia small{font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;}
+.pena .sello{position:absolute;top:14px;right:12px;font-weight:800;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;background:var(--rojo);color:#fff;border-radius:999px;padding:4px 10px;}
+.pena .sello.pocas{background:var(--oro);color:#1d1830;}
+.pena .info{padding:18px;display:flex;flex-direction:column;gap:6px;flex:1;}
+.pena .info h3{font-family:var(--f-display);font-size:24px;line-height:1.15;}
+.pena .info .subt{color:var(--oro);font-weight:700;font-size:13px;}
+.pena .info .art{color:var(--crema);font-size:14px;}
+.pena .info .cuando{color:var(--gris);font-size:13px;}
+.pena .info .pie-pena{margin-top:auto;padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.pena .precio{font-family:var(--f-display);font-size:26px;color:var(--oro-vivo);}
+.pena .precio small{display:block;font-family:var(--f-texto);font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--gris);}
+.pena .btn{width:auto;padding:12px 18px;font-size:14px;}
+.pena .pronto{font-weight:800;font-size:13px;color:var(--gris);text-transform:uppercase;letter-spacing:.08em;}
+/* Gala (un solo evento): entradas */
+.entradas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:26px;}
+.entrada{background:var(--noche-2);border:1px solid rgba(231,194,125,.25);border-radius:20px;padding:22px;text-align:center;position:relative;}
+.entrada b{display:block;font-weight:800;font-size:17px;}
+.entrada small{display:block;color:var(--gris);font-size:13px;margin-top:4px;min-height:18px;}
+.entrada .precio{font-family:var(--f-display);font-size:38px;margin:14px 0;color:var(--oro-vivo);}
+.entrada .sello{position:absolute;top:-10px;right:14px;font-weight:800;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;background:var(--rojo);color:#fff;border-radius:999px;padding:3px 10px;}
+.entrada .sello.pocas{background:var(--oro);color:#1d1830;}
+.destacados{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:24px;}
+.destacados div{background:rgba(246,240,230,.05);border:1px solid rgba(246,240,230,.12);border-radius:18px;padding:20px;text-align:center;}
+.destacados .ico{font-size:34px;line-height:1;}
+.destacados h3{font-family:var(--f-display);font-size:20px;margin-top:10px;}
+.destacados p{color:var(--gris);font-size:14px;margin-top:6px;}
+.pasos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:24px;counter-reset:paso;}
+.pasos div{position:relative;background:var(--noche-2);border:1px solid rgba(231,194,125,.22);border-radius:18px;padding:22px 20px 20px;}
+.pasos b{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--oro);color:#1d1830;font-weight:800;font-size:18px;}
+.pasos h3{font-family:var(--f-display);font-size:20px;margin-top:12px;}
+.pasos p{color:var(--gris);font-size:14px;margin-top:6px;}
+.pasos strong{color:var(--crema);}
+.mapa{width:100%;height:320px;border:0;border-radius:18px;margin-top:14px;filter:saturate(.85);}
+.pena .nota{display:inline-block;align-self:flex-start;font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#1d1830;background:var(--oro);border-radius:999px;padding:3px 10px;}
+.pena details.mas{margin-top:4px;}
+.pena details.mas summary{cursor:pointer;color:var(--oro);font-weight:700;font-size:13px;}
+.pena details.mas p{color:var(--gris);font-size:13.5px;margin-top:8px;line-height:1.55;}
+.pena .ext{display:flex;flex-direction:column;gap:2px;}
+.pena .ext b{font-family:var(--f-display);font-size:20px;color:var(--oro-vivo);line-height:1.15;}
+.pena .ext span{font-size:12px;color:var(--gris);}
+#redes a{margin:0 8px;}
+#redes{display:block;margin-bottom:10px;}
+.sobre{max-width:720px;margin:18px auto 0;text-align:center;color:var(--crema);font-size:16.5px;line-height:1.7;}
+.sobre p+p{margin-top:12px;}
+.llamado{display:flex;gap:22px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:linear-gradient(135deg,rgba(231,194,125,.16),rgba(231,194,125,.05));
+  border:1px solid rgba(231,194,125,.35);border-radius:22px;padding:26px;}
+.llamado > div{flex:1;min-width:240px;}
+.llamado h2{text-align:left;font-size:clamp(24px,5vw,32px);}
+.llamado .kicker{font-weight:800;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--oro);}
+.llamado p{color:var(--crema);margin-top:8px;}
+.btn.wa{width:auto;background:#25d366;color:#06210f;box-shadow:0 10px 26px rgba(37,211,102,.25);}
+.datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:26px;}
+.dato{background:rgba(246,240,230,.05);border:1px solid rgba(246,240,230,.12);border-radius:16px;padding:18px;}
+.dato small{display:block;font-weight:800;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--oro);}
+.dato p{margin-top:6px;font-weight:600;}
+.preguntas{margin-top:22px;display:grid;gap:10px;}
+.preguntas details{background:rgba(246,240,230,.05);border:1px solid rgba(246,240,230,.12);border-radius:14px;padding:14px 16px;}
+.preguntas summary{cursor:pointer;font-weight:800;}
+.preguntas p{margin-top:8px;color:var(--gris);}
+.barra-compra{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(20,16,34,.94);
+  border-top:1px solid rgba(231,194,125,.25);display:none;z-index:20;backdrop-filter:blur(6px);}
+.barra-compra .btn{max-width:520px;margin:0 auto;display:flex;}
+@media (max-width:700px){.barra-compra.visible{display:block;} body{padding-bottom:84px;}}
+.pie{padding:48px 16px 30px;}
+</style>
+</head>
+<body>
+<header class="portada" style="--foto:url('assets/portada.webp')">
+  <div class="dentro">
+    <img class="logo" src="assets/logo.webp" width="130" height="130" alt="">
+    <p class="organiza" id="organiza"></p>
+    <h1 id="titulo">%%NOMBRE%%</h1>
+    <p class="cuando" id="cuando"></p>
+    <p class="lugar" id="lugar"></p>
+    <div class="cuenta" id="cuenta" hidden><div><b id="c-d">0</b><small>días</small></div><div><b id="c-h">0</b><small>horas</small></div><div><b id="c-m">0</b><small>min</small></div></div>
+    <a class="btn" id="btn-principal" href="#cartelera">Ver cartelera</a>
+  </div>
+</header>
+
+<section class="seccion" id="cartelera">
+  <h2 id="t-entradas">Cartelera</h2>
+  <p class="sub" id="sub-entradas">Comprás online, pagás por transferencia y el QR te llega al correo al instante.</p>
+  <div id="lista"></div>
+</section>
+
+<section class="seccion" id="destacados" hidden>
+  <h2>Lo que se vive</h2>
+  <div class="destacados" id="dest-lista"></div>
+</section>
+
+<section class="seccion" id="sobre" hidden>
+  <h2 id="sobre-tit"></h2>
+  <div class="sobre" id="sobre-txt"></div>
+</section>
+
+<section class="seccion" id="feriantes" hidden>
+  <div class="llamado">
+    <div>
+      <p class="kicker">Para emprendedores</p>
+      <h2 id="fer-tit"></h2>
+      <p id="fer-txt"></p>
+    </div>
+    <a class="btn wa" id="fer-btn" target="_blank" rel="noopener">Consultar por WhatsApp</a>
+  </div>
+</section>
+
+<section class="seccion">
+  <h2>Cómo comprar tu entrada</h2>
+  <div class="pasos">
+    <div><b>1</b><h3>Elegí la fecha</h3><p>Entrá a la cartelera, elegí la peña y cuántas entradas querés.</p></div>
+    <div><b>2</b><h3>Pagá por transferencia</h3><p>Desde la app de tu banco o tu billetera, <strong>desde una cuenta a tu nombre</strong>. Te damos el CVU al momento.</p></div>
+    <div><b>3</b><h3>Recibí tu QR</h3><p>Te llega al correo al instante. En la puerta lo mostrás desde el celular y entrás.</p></div>
+  </div>
+</section>
+
+<section class="seccion">
+  <h2>Cómo llegar</h2>
+  <div class="datos" id="datos"></div>
+  <iframe class="mapa" id="mapa" title="Mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade" hidden></iframe>
+</section>
+
+<section class="seccion">
+  <h2>Preguntas frecuentes</h2>
+  <div class="preguntas" id="preguntas"></div>
+</section>
+
+<p class="pie"><span id="redes"></span>¿Ya compraste? <a href="/mis-entradas">Mis entradas</a></p>
+<div class="barra-compra" id="barra"><a class="btn" id="btn-barra" href="#cartelera">Comprar entradas</a></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const pesos = n => '$' + Number(n).toLocaleString('es-AR');
+const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const sello = estado => estado === 'agotado' ? '<span class="sello">Agotado</span>' : estado === 'pocas' ? '<span class="sello pocas">Quedan pocas</span>' : '';
+function estadoEvento(e) {
+  const est = Object.values(e.tipos).map(t => t.estado);
+  return est.length && est.every(x => x === 'agotado') ? 'agotado' : est.includes('pocas') ? 'pocas' : '';
+}
+
+function cuentaRegresiva(fecha, hora) {
+  const objetivo = new Date(`${fecha}T${hora || '21:00'}:00-03:00`).getTime();
+  const pintar = () => {
+    const falta = objetivo - Date.now();
+    if (falta <= 0) { $('#cuenta').hidden = true; return; }
+    $('#cuenta').hidden = false;
+    $('#c-d').textContent = Math.floor(falta / 864e5); $('#c-h').textContent = Math.floor(falta / 36e5) % 24; $('#c-m').textContent = Math.floor(falta / 6e4) % 60;
+  };
+  pintar(); setInterval(pintar, 30000);
+}
+
+// Una tarjeta por fecha de la cartelera
+function tarjeta(e) {
+  const [, m, d] = e.fecha.split('-').map(Number);
+  const precios = Object.values(e.tipos).map(t => t.final);
+  // Con un solo tipo, si no es la entrada general se muestra su nombre (ej. "Primeras anticipadas").
+  const unico = precios.length === 1 ? Object.values(e.tipos)[0].nombre : '';
+  const rotulo = precios.length > 1 ? 'Desde' : unico && !/general/i.test(unico) ? unico : 'Entrada';
+  const est = estadoEvento(e);
+  // Tres casos: la vendemos nosotros, la vende otra ticketera (botón a su venta) o todavía no está a la venta.
+  const pie = e.externo
+    ? `<div class="ext">${e.externo.precio ? `<b>${esc(e.externo.precio)}</b>` : ''}<span>${esc(e.externo.url ? 'Se vende en su ticketera' : (e.externo.texto || 'Venta en ticketera oficial'))}</span></div>`
+      + (e.externo.url ? `<a class="btn" href="${esc(e.externo.url)}" target="_blank" rel="noopener">${esc(e.externo.texto || 'Comprar')}</a>` : '')
+    : e.vendible && est !== 'agotado'
+    ? `<span class="precio"><small>${esc(rotulo)}</small>${pesos(Math.min(...precios))}</span><a class="btn" href="/comprar?evento=${encodeURIComponent(e.id)}">Comprar</a>`
+    : `<span class="pronto">${est === 'agotado' ? 'Entradas agotadas' : 'Entradas muy pronto'}</span>`;
+  const mas = e.descripcion ? `<details class="mas"><summary>Ver más</summary>${e.descripcion.split(/\n+/).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('')}</details>` : '';
+  return `<article class="pena">
+    <div class="foto${e.imagen ? '' : ' sin-foto'}">${e.imagen ? `<img src="${esc(e.imagen)}" alt="${esc(e.nombre)}" loading="lazy">` : '<div class="sin"><img src="assets/logo.webp" alt=""></div>'}
+      <div class="dia"><b>${d}</b><small>${MESES[m - 1]}</small></div>${sello(est)}</div>
+    <div class="info">
+      <h3>${esc(e.nombre)}</h3>
+      ${e.subtitulo ? `<p class="subt">${esc(e.subtitulo)}</p>` : ''}
+      ${e.artistas?.length ? `<p class="art">${esc(e.artistas.join(' · '))}</p>` : ''}
+      <p class="cuando">${esc(e.cuando.charAt(0).toUpperCase() + e.cuando.slice(1))}${e.hora ? '' : ' · horario a confirmar'}</p>
+      ${e.nota ? `<span class="nota">${esc(e.nota)}</span>` : ''}
+      ${mas}
+      <div class="pie-pena">${pie}</div>
+    </div></article>`;
+}
+
+fetch('/api/config').then(r => r.json()).then(c => {
+  const s = c.sitio, eventos = c.eventos || [];
+  const gala = s.modo === 'gala' && eventos.length === 1;
+  const e0 = eventos[0];
+  if (gala) {
+    // Un solo evento: la portada es el evento y abajo van sus tipos de entrada.
+    $('#organiza').textContent = s.organiza || s.nombre;
+    $('#titulo').textContent = e0.nombre; $('#cuando').textContent = e0.cuando; $('#lugar').textContent = s.lugar;
+    cuentaRegresiva(e0.fecha, e0.hora);
+    $('#t-entradas').textContent = 'Entradas';
+    $('#lista').className = 'entradas';
+    $('#lista').innerHTML = Object.entries(e0.tipos).map(([k, t]) => {
+      const boton = e0.vendible && t.estado !== 'agotado' ? `<a class="btn" href="/comprar?evento=${encodeURIComponent(e0.id)}&tipo=${encodeURIComponent(k)}">Comprar</a>` : '';
+      return `<div class="entrada">${sello(t.estado)}<b>${esc(t.nombre)}</b><small>${esc(t.detalle || '')}</small><div class="precio">${pesos(t.final)}</div>${boton}</div>`;
+    }).join('') || '<p class="sub">Las entradas salen a la venta muy pronto.</p>';
+    if (e0.vendible) { $('#btn-principal').textContent = 'Comprar entradas'; $('#btn-principal').href = `/comprar?evento=${encodeURIComponent(e0.id)}`; $('#btn-barra').href = $('#btn-principal').href; $('#barra').classList.add('visible'); }
+    else { $('#btn-principal').textContent = 'Entradas muy pronto'; $('#btn-principal').removeAttribute('href'); $('#btn-principal').style.opacity = '.7'; $('#sub-entradas').textContent = 'La venta online abre muy pronto.'; }
+  } else {
+    // Cartelera: la portada es el lugar y abajo van las próximas fechas.
+    $('#organiza').textContent = s.lema || s.organiza || '';
+    $('#titulo').textContent = s.nombre;
+    $('#cuando').textContent = e0 ? `Próxima: ${e0.nombre} · ${e0.cuando}` : 'Muy pronto, nuevas fechas';
+    $('#lugar').textContent = [s.direccion, s.ciudad].filter(Boolean).join(' · ');
+    $('#lista').className = 'cartelera';
+    $('#lista').innerHTML = eventos.map(tarjeta).join('') || '<p class="sub">Muy pronto anunciamos las próximas fechas.</p>';
+    if (eventos.some(e => e.vendible)) $('#barra').classList.add('visible');
+  }
+  if (s.destacados?.length) {
+    $('#destacados').hidden = false;
+    $('#dest-lista').innerHTML = s.destacados.map(d => `<div><span class="ico">${esc(d.icono)}</span><h3>${esc(d.titulo)}</h3><p>${esc(d.texto)}</p></div>`).join('');
+  }
+  if (s.direccion) {
+    $('#mapa').src = 'https://www.google.com/maps?output=embed&q=' + encodeURIComponent([s.direccion, s.ciudad].filter(Boolean).join(', '));
+    $('#mapa').hidden = false;
+  }
+  $('#redes').innerHTML = [s.facebook && `<a href="${esc(s.facebook)}" target="_blank" rel="noopener">Facebook</a>`,
+    s.instagram && `<a href="https://instagram.com/${encodeURIComponent(s.instagram)}" target="_blank" rel="noopener">Instagram</a>`].filter(Boolean).join('');
+  if (s.sobre) {
+    $('#sobre').hidden = false; $('#sobre-tit').textContent = s.sobre.titulo;
+    $('#sobre-txt').innerHTML = s.sobre.parrafos.map(p => `<p>${esc(p)}</p>`).join('');
+  }
+  if (s.feriantes) {
+    $('#feriantes').hidden = false; $('#fer-tit').textContent = s.feriantes.titulo; $('#fer-txt').textContent = s.feriantes.texto;
+    $('#fer-btn').href = `https://wa.me/${encodeURIComponent(s.feriantes.whatsapp)}${s.feriantes.mensaje ? '?text=' + encodeURIComponent(s.feriantes.mensaje) : ''}`;
+  }
+  const mapa = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([s.lugar, s.direccion, s.ciudad].filter(Boolean).join(', '));
+  $('#datos').innerHTML = [
+    ['Dónde', `${esc(s.lugar)}${s.direccion ? '<br>' + esc(s.direccion) : ''}${s.ciudad ? '<br>' + esc(s.ciudad) : ''}<br><a href="${mapa}" target="_blank" rel="noopener">Ver en el mapa</a>`],
+    ...(gala && e0.puertas ? [['Apertura de puertas', esc(e0.puertas)]] : []),
+    ...(s.menores ? [['Menores', esc(s.menores)]] : []),
+    ...(s.instagram ? [['Seguinos', `<a href="https://instagram.com/${encodeURIComponent(s.instagram)}" target="_blank" rel="noopener">@${esc(s.instagram)}</a>`]] : []),
+    ...(s.ayudaWhatsapp ? [['Consultas', `<a href="https://wa.me/${encodeURIComponent(s.ayudaWhatsapp)}" target="_blank" rel="noopener">Escribinos por WhatsApp</a>`]] : []),
+  ].map(([t, v]) => `<div class="dato"><small>${t}</small><p>${v}</p></div>`).join('');
+  const ayuda = s.ayudaWhatsapp ? ` Si tenés un problema, escribinos por <a href="https://wa.me/${encodeURIComponent(s.ayudaWhatsapp)}" target="_blank" rel="noopener">WhatsApp</a>.` : '';
+  $('#preguntas').innerHTML = [
+    ['¿Cómo pago?', 'Por transferencia, desde la app de tu banco o de tu billetera (Mercado Pago, Ualá, Naranja X, MODO o cualquier banco). Al comprar te damos un número de cuenta (CVU) para transferir.'],
+    ['¿Desde qué cuenta transfiero?', 'Desde una cuenta a tu nombre, y poné el DNI del titular de esa cuenta cuando te lo pida. Si transfiere otra persona, el pago no se reconoce automáticamente.' + ayuda],
+    ['¿Cuándo me llegan las entradas?', 'Apenas se acredita la transferencia, que suele tardar unos segundos. Las ves en pantalla y te llegan al correo, con un QR por entrada.'],
+    ['¿Y si pierdo el mail?', 'Entrá a <a href="/mis-entradas">Mis entradas</a> con el email y el DNI que usaste al comprar.'],
+    ['¿Cómo entro?', 'Mostrás el QR en la puerta, desde el celular o impreso. Cada QR sirve una sola vez, solo para la fecha que compraste, y cada persona necesita el suyo.'],
+  ].map(([p, r]) => `<details><summary>${p}</summary><p>${r}</p></details>`).join('');
+  fetch('/api/visita', { method: 'POST' }).catch(() => {});
+}).catch(() => {});
+</script>
+</body>
+</html>
