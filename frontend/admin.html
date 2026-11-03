@@ -206,6 +206,16 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
         <button class="chico oro" onclick="conectarChytapay()" style="margin-top:10px;" id="cy-boton">Generar enlace para conectar la cuenta del organizador</button>
         <div id="cy-enlace"></div>
       </section>
+      <section class="tarjeta ve-todo">
+        <p class="paso">Cortesía (para la fecha elegida)</p>
+        <p class="ayuda">Entrada sin cargo: ocupa lugar en el cupo y le llega al mail como cualquier otra, con su QR. Figura en Operaciones como "cortesía".</p>
+        <div class="selector" id="c-tipos" style="margin-top:10px;"></div>
+        <div class="fila"><input id="c-nombre" placeholder="Nombre y apellido"><input id="c-email" placeholder="Email" type="email"></div>
+        <div class="fila"><input id="c-dni" placeholder="DNI (opcional)" inputmode="numeric">
+          <label class="ayuda" style="display:flex;align-items:center;gap:8px;flex:0 0 auto;margin:0;">Cantidad <input id="c-cant" type="number" min="1" max="20" value="1" style="width:80px;"></label></div>
+        <p class="ayuda">Con el DNI, la persona puede recuperar su entrada en "Mis entradas" si pierde el mail.</p>
+        <button class="chico oro" onclick="cortesia()" style="margin-top:10px;">Emitir cortesía</button> <span id="c-msg"></span>
+      </section>
       <section class="tarjeta">
         <p class="paso">Planilla</p>
         <button class="chico" onclick="exportar(true)">Ventas de la fecha elegida (CSV)</button>
@@ -216,13 +226,6 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
         <p class="ayuda">Plata que entró a la cuenta del organizador pero no se pudo asignar sola a una compra (pagó otra persona, pagó tarde o pagó dos veces).
           Se asigna desde la cuenta de Chytapay a la compra que corresponde, y ahí se emiten las entradas solas.</p>
         <div class="tabla"><table><thead><tr><th>Fecha</th><th class="n">Monto</th><th>Quién pagó</th><th>Motivo</th><th>Compra</th><th></th></tr></thead><tbody id="si-filas"></tbody></table></div>
-      </section>
-      <section class="tarjeta solo-admin">
-        <p class="paso">Cortesía (para la fecha elegida)</p>
-        <p class="ayuda">Entrada sin cargo: ocupa lugar en el cupo y le llega al mail como cualquier otra.</p>
-        <div class="selector" id="c-tipos" style="margin-top:10px;"></div>
-        <div class="fila"><input id="c-nombre" placeholder="Nombre"><input id="c-email" placeholder="Email" type="email"><input id="c-cant" type="number" min="1" max="20" value="1" style="max-width:90px;flex:0 0 90px;"></div>
-        <button class="chico oro" onclick="cortesia()" style="margin-top:10px;">Emitir cortesía</button> <span id="c-msg"></span>
       </section>
       <section class="tarjeta solo-admin">
         <p class="paso">Pruebas</p>
@@ -326,9 +329,9 @@ function salir() { localStorage.removeItem('gala_sesion'); S = null; cerrarCamar
 // ── Pestañas según el rol ──
 const PESTANAS = {
   admin: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['punto', 'Punto de venta'], ['herramientas', 'Herramientas']],
-  // El organizador: ve todo y carga la cartelera; no vende ni emite (sin "Punto de venta", ni cortesías, ni pruebas).
+  // El organizador: ve todo, carga la cartelera y emite cortesías; no vende (sin "Punto de venta" ni pruebas).
   // En una gala de una sola fecha tampoco ve la cartelera (los precios y las etapas los carga José en la ficha).
-  organizador: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['herramientas', 'Planilla y pagos']],
+  organizador: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['herramientas', 'Cortesías y planilla']],
   control: [['puerta', 'Puerta'], ['ventas', 'Buscar']],
   venta: [['punto', 'Vender'], ['ventas', 'Buscar']],
 };
@@ -351,6 +354,7 @@ async function armar() {
   $('#quien').textContent = S.nombre || S.usuario;
   $('#rol-txt').textContent = { admin: 'Administración', organizador: 'Organización', control: 'Puerta', venta: 'Punto de venta' }[S.rol];
   $$('.solo-admin').forEach(e => e.hidden = !ES_ADMIN());
+  $$('.ve-todo').forEach(e => e.hidden = !VE_TODO());
   $$('.puede-reenviar').forEach(e => e.hidden = !PUEDE_REENVIAR());
   $('#tabs').innerHTML = PESTANAS[S.rol].map(([k, t]) => `<button data-t="${k}">${t}</button>`).join('');
   $$('#tabs button').forEach(b => b.onclick = () => abrir(b.dataset.t));
@@ -691,8 +695,10 @@ async function exportar(soloEsta) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = soloEsta && EVA ? `ventas-${EVA}.csv` : 'ventas.csv'; a.click();
 }
 async function cortesia() {
-  try { const d = await api('/api/admin/entrada-cortesia', { method: 'POST', body: JSON.stringify({ evento: EVA, tipo: C_TIPO, nombre: $('#c-nombre').value, email: $('#c-email').value, cantidad: +$('#c-cant').value }) });
-    $('#c-msg').innerHTML = `<span class="ok-msg">Enviada a ${esc(d.email)}.</span>`; $('#c-nombre').value = ''; $('#c-email').value = ''; }
+  const cant = +$('#c-cant').value || 1, mail = $('#c-email').value.trim();
+  if (mail && !confirm(`¿Mandar ${cant === 1 ? '1 entrada de cortesía' : cant + ' entradas de cortesía'} a ${mail}?`)) return;
+  try { const d = await api('/api/admin/entrada-cortesia', { method: 'POST', body: JSON.stringify({ evento: EVA, tipo: C_TIPO, nombre: $('#c-nombre').value, email: mail, dni: $('#c-dni').value, cantidad: cant }) });
+    $('#c-msg').innerHTML = `<span class="ok-msg">Enviada a ${esc(d.email)}.</span>`; for (const c of ['#c-nombre', '#c-email', '#c-dni']) $(c).value = ''; $('#c-cant').value = 1; }
   catch (x) { $('#c-msg').innerHTML = `<span class="err-msg">${esc(x.message)}</span>`; }
 }
 async function prueba() {

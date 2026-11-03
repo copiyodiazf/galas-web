@@ -444,6 +444,7 @@ async function enviarMailEntradas(orden, entradas) {
   }
   attachments.push(...adjuntoLogo())
   const nombreEv = ev?.nombre || orden.evento, cuando = ev ? cuandoDe(ev) : ''
+  const invitacion = orden.metodo === 'cortesia'   // cortesía: el mail no habla de "compra"
 
   const qrsHtml = entradas.map((e, i) => `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
@@ -462,8 +463,8 @@ async function enviarMailEntradas(orden, entradas) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;margin:auto;background:#ffffff;border-radius:16px;overflow:hidden;">
       ${encabezadoMail(ev)}
       <tr><td style="padding:26px 26px 6px;">
-        <div style="font:800 20px/1.3 Arial,sans-serif;color:#1d1830;">¡Listo, ${primerNombre(orden.nombre)}!</div>
-        <p style="font:400 15px/1.6 Arial,sans-serif;color:#3a334d;margin:10px 0 0;">Tu compra se confirmó. Abajo ${orden.cantidad > 1 ? `están tus <b>${cuantasEntradas(orden)}</b>, cada una con su QR` : `está tu <b>entrada</b> con su QR`}. Cada QR sirve para entrar <b>una vez</b>, solo el <b>${escapeHtml(cuando)}</b>.</p>
+        <div style="font:800 20px/1.3 Arial,sans-serif;color:#1d1830;">${invitacion ? '¡Hola' : '¡Listo'}, ${primerNombre(orden.nombre)}!</div>
+        <p style="font:400 15px/1.6 Arial,sans-serif;color:#3a334d;margin:10px 0 0;">${invitacion ? `${escapeHtml(SITIO.organiza || SITIO.nombre)} te invita.` : 'Tu compra se confirmó.'} Abajo ${orden.cantidad > 1 ? `están tus <b>${cuantasEntradas(orden)}</b>, cada una con su QR` : `está tu <b>entrada</b> con su QR`}. Cada QR sirve para entrar <b>una vez</b>, solo el <b>${escapeHtml(cuando)}</b>.</p>
       </td></tr>
       <tr><td style="padding:16px 26px 0;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1f8;border-radius:12px;">
@@ -492,9 +493,9 @@ async function enviarMailEntradas(orden, entradas) {
     </table>
   </div>`
 
-  const texto = `¡Listo, ${String(orden.nombre || '').split(' ')[0]}!
+  const texto = `${invitacion ? '¡Hola' : '¡Listo'}, ${String(orden.nombre || '').split(' ')[0]}!
 
-Tu compra se confirmó: ${cuantasEntradas(orden)} · ${tipo.nombre}.
+${invitacion ? `${SITIO.organiza || SITIO.nombre} te invita` : 'Tu compra se confirmó'}: ${cuantasEntradas(orden)} · ${tipo.nombre}.
 ${nombreEv} · ${cuando}
 ${SITIO.lugar}${SITIO.direccion ? ' · ' + SITIO.direccion : ''}
 
@@ -505,7 +506,8 @@ N° de compra: ${orden.id}`
 
   const info = await t.sendMail({
     from: remitente(), to: orden.email,
-    subject: orden.cantidad > 1 ? `Tus ${cuantasEntradas(orden)} para ${nombreEv} (${ev ? fechaCorta(ev) : ''})` : `Tu entrada para ${nombreEv} (${ev ? fechaCorta(ev) : ''})`,
+    subject: invitacion ? `Tu invitación para ${nombreEv} (${ev ? fechaCorta(ev) : ''})`
+      : orden.cantidad > 1 ? `Tus ${cuantasEntradas(orden)} para ${nombreEv} (${ev ? fechaCorta(ev) : ''})` : `Tu entrada para ${nombreEv} (${ev ? fechaCorta(ev) : ''})`,
     text: texto, html, attachments,
   })
   const vista = nodemailer.getTestMessageUrl(info)
@@ -1069,8 +1071,8 @@ app.post('/api/admin/entrada-prueba', requireAuth(['admin']), async (req, res) =
   }
 })
 
-// CORTESÍA (solo admin): QR real que se manda por mail. Ocupa lugar pero no es venta.
-app.post('/api/admin/entrada-cortesia', requireAuth(['admin']), async (req, res) => {
+// CORTESÍA (admin y organizador: es su evento): QR real que se manda por mail. Ocupa lugar pero no es venta.
+app.post('/api/admin/entrada-cortesia', requireAuth(ORGANIZACION), async (req, res) => {
   try {
     const nombre = String(req.body?.nombre || '').trim() || 'Invitación'
     const email = String(req.body?.email || '').trim().toLowerCase()
