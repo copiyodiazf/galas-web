@@ -83,6 +83,18 @@ function coloresMail(m = {}) {
   }
 }
 
+// Archivos de la galería y del video de portada: dentro de assets/ del tema, o un https:// completo.
+const RUTA = /^(assets\/[\w\-./]+|https:\/\/[^\s"'<>]+)$/
+const rutaArchivo = x => { const r = String(x || '').trim(); return RUTA.test(r) && !r.includes('..') ? r.slice(0, 300) : '' }
+function galeriaDe(g) {
+  if (!g) return null
+  const items = (Array.isArray(g) ? g : g.items || []).slice(0, 30)
+    .map(i => ({ foto: rutaArchivo(i.foto), mini: rutaArchivo(i.mini) || null, video: rutaArchivo(i.video) || null, alt: limpio(i.alt, 140) })).filter(i => i.foto)
+  // pasarela: las fotos corren en una tira y los videos van aparte, con su título (tituloVideos)
+  return items.length ? { titulo: limpio(g.titulo, 80) || 'Galería', texto: limpio(g.texto, 300), items,
+    pasarela: g.pasarela === true, tituloVideos: limpio(g.tituloVideos, 80) } : null
+}
+
 export function leerSitio(archivo = process.env.SITIO_ARCHIVO || 'sitio.json') {
   const ruta = isAbsolute(archivo) ? archivo : join(aqui, archivo)
   const s = JSON.parse(readFileSync(ruta, 'utf8'))
@@ -110,6 +122,12 @@ export function leerSitio(archivo = process.env.SITIO_ARCHIVO || 'sitio.json') {
       facebook: /^https:\/\//.test(s.facebook || '') ? limpio(s.facebook, 200) : '',
       // "Lo que se vive": 3 o 4 tarjetas cortas con un ícono (emoji), título y texto.
       destacados: (s.destacados || []).slice(0, 6).map(d => ({ icono: limpio(d.icono, 8), titulo: limpio(d.titulo, 60), texto: limpio(d.texto, 220) })).filter(d => d.titulo),
+      // Galería: { titulo, texto, items: [{ foto, video?, alt }] }. "foto" es la imagen (o el cuadro del video).
+      galeria: galeriaDe(s.galeria),
+      // Video de fondo de la portada, mudo y en loop (mp4 liviano, sin sonido). La foto portada.webp queda debajo.
+      portadaVideo: rutaArchivo(s.portadaVideo),
+      // Opcional: versión vertical del video para celulares (si no está, el celular usa portadaVideo recortado).
+      portadaVideoMovil: rutaArchivo(s.portadaVideoMovil),
       feriantes: s.feriantes?.whatsapp ? { titulo: limpio(s.feriantes.titulo || 'Feriantes y emprendedores', 80), texto: limpio(s.feriantes.texto, 600),
         whatsapp: String(s.feriantes.whatsapp).replace(/\D/g, ''), mensaje: limpio(s.feriantes.mensaje, 200) } : null,
     },

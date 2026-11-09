@@ -1,27 +1,157 @@
 {
-  "nombre": "Patio Lo de O-Li",
+  "nombre": "Patio de Oli",
   "lema": "Espacio Verde · Patio santiagueño",
-  "organiza": "Patio Lo de O-Li",
-  "lugar": "Patio Lo de O-Li",
+  "organiza": "Patio de Oli",
+  "lugar": "Patio de Oli",
   "direccion": "Av. Besares 2279",
   "ciudad": "La Banda, Santiago del Estero",
-  "instagram": "",
+  "instagram": "patio_deoli",
   "ayudaWhatsapp": "",
   "menores": "",
   "modo": "cartelera",
   "sobre": {
     "titulo": "El patio",
     "parrafos": [
-      "Patio Lo de O-Li es un espacio verde sobre la avenida Besares, en La Banda: un patio santiagueño al aire libre, bajo los árboles, donde el folklore se vive de cerca.",
+      "El Patio de Oli es un espacio verde sobre la avenida Besares, en La Banda: un patio santiagueño al aire libre, bajo los árboles, donde el folklore se vive de cerca.",
       "Un lugar tradicional de La Banda, ligado a la identidad cultural santiagueña. Dos veces por mes abrimos el patio para peñas con artistas de la provincia y del país, para compartir con la familia y los amigos.",
       "En Santiago, la chacarera es danza, poesía y encuentro: vive en la peña, en el patio y en la guitarreada familiar, donde el canto y el baile son de todos. Eso es lo que buscamos que pase en cada noche del patio."
+    ]
+  },
+  "portadaVideo": "assets/portada.mp4",
+  "portadaVideoMovil": "assets/portada-movil.mp4",
+  "galeria": {
+    "titulo": "Conocé el patio",
+    "texto": "Así se viven las peñas en el Patio de Oli: folklore en vivo, baile, comida casera y el patio lleno bajo los árboles.",
+    "pasarela": true,
+    "tituloVideos": "Videos de las peñas",
+    "items": [
+      {
+        "foto": "assets/galeria/foto-01.webp",
+        "mini": "assets/galeria/mini/foto-01.webp",
+        "alt": "Paisanas bailando bajo las guirnaldas del patio"
+      },
+      {
+        "foto": "assets/galeria/la-pista-llena.webp",
+        "video": "assets/galeria/la-pista-llena.mp4",
+        "alt": "La pista llena, de noche"
+      },
+      {
+        "foto": "assets/galeria/foto-03.webp",
+        "mini": "assets/galeria/mini/foto-03.webp",
+        "alt": "Chacarera bajo el quincho, al caer el sol"
+      },
+      {
+        "foto": "assets/galeria/foto-04.webp",
+        "mini": "assets/galeria/mini/foto-04.webp",
+        "alt": "El patio lleno bajo las luces"
+      },
+      {
+        "foto": "assets/galeria/foto-05.webp",
+        "mini": "assets/galeria/mini/foto-05.webp",
+        "alt": "Chacarera con el pañuelo al aire"
+      },
+      {
+        "foto": "assets/galeria/foto-06.webp",
+        "mini": "assets/galeria/mini/foto-06.webp",
+        "alt": "Una pareja bailando en la peña"
+      },
+      {
+        "foto": "assets/galeria/chacarera-con-bombo.webp",
+        "video": "assets/galeria/chacarera-con-bombo.mp4",
+        "alt": "Chacarera con bombo, de día"
+      },
+      {
+        "foto": "assets/galeria/foto-08.webp",
+        "mini": "assets/galeria/mini/foto-08.webp",
+        "alt": "Tarde de peña bajo los banderines"
+      },
+      {
+        "foto": "assets/galeria/foto-09.webp",
+        "mini": "assets/galeria/mini/foto-09.webp",
+        "alt": "Bailarines con bombo"
+      },
+      {
+        "foto": "assets/galeria/foto-10.webp",
+        "mini": "assets/galeria/mini/foto-10.webp",
+        "alt": "Ballet folklórico en el patio"
+      },
+      {
+        "foto": "assets/galeria/foto-11.webp",
+        "mini": "assets/galeria/mini/foto-11.webp",
+        "alt": "Una pollera que gira"
+      },
+      {
+        "foto": "assets/galeria/asado-a-la-estaca.webp",
+        "video": "assets/galeria/asado-a-la-estaca.mp4",
+        "alt": "El asado del patio"
+      },
+      {
+        "foto": "assets/galeria/foto-13.webp",
+        "mini": "assets/galeria/mini/foto-13.webp",
+        "alt": "Mesas llenas para compartir"
+      },
+      {
+        "foto": "assets/galeria/foto-14.webp",
+        "mini": "assets/galeria/mini/foto-14.webp",
+        "alt": "La cervecería del patio"
+      },
+      {
+        "foto": "assets/galeria/foto-15.webp",
+        "mini": "assets/galeria/mini/foto-15.webp",
+        "alt": "Puestos de feriantes y emprendedores"
+      },
+      {
+        "foto": "assets/galeria/folklore-en-vivo.webp",
+        "video": "assets/galeria/folklore-en-vivo.mp4",
+        "alt": "Folklore en vivo en el escenario"
+      },
+      {
+        "foto": "assets/galeria/foto-17.webp",
+        "mini": "assets/galeria/mini/foto-17.webp",
+        "alt": "Música en vivo al atardecer"
+      },
+      {
+        "foto": "assets/galeria/foto-18.webp",
+        "mini": "assets/galeria/mini/foto-18.webp",
+        "alt": "Bailarines en la pista"
+      },
+      {
+        "foto": "assets/galeria/foto-19.webp",
+        "mini": "assets/galeria/mini/foto-19.webp",
+        "alt": "El público, de cerca"
+      },
+      {
+        "foto": "assets/galeria/foto-20.webp",
+        "mini": "assets/galeria/mini/foto-20.webp",
+        "alt": "Pollera blanca en plena chacarera"
+      },
+      {
+        "foto": "assets/galeria/foto-21.webp",
+        "mini": "assets/galeria/mini/foto-21.webp",
+        "alt": "Pañuelo rojo en alto"
+      },
+      {
+        "foto": "assets/galeria/foto-22.webp",
+        "mini": "assets/galeria/mini/foto-22.webp",
+        "alt": "Baile en el patio"
+      },
+      {
+        "foto": "assets/galeria/foto-23.webp",
+        "mini": "assets/galeria/mini/foto-23.webp",
+        "alt": "Danza con bombos"
+      },
+      {
+        "foto": "assets/galeria/foto-24.webp",
+        "mini": "assets/galeria/mini/foto-24.webp",
+        "alt": "Peña de noche"
+      }
     ]
   },
   "feriantes": {
     "titulo": "Feriantes y emprendedores",
     "texto": "¿Tenés un emprendimiento y querés vender en nuestras peñas? En cada fecha reservamos lugares para feriantes y emprendedores. Los lugares son limitados: consultá disponibilidad y condiciones por WhatsApp.",
     "whatsapp": "5493855803901",
-    "mensaje": "Hola, quiero consultar por un lugar para vender en una peña del Patio Lo de O-Li."
+    "mensaje": "Hola, quiero consultar por un lugar para vender en una peña del Patio de Oli."
   },
   "destacados": [
     {
@@ -50,6 +180,7 @@
       "nombre": "Peña Las Dos Lunas",
       "subtitulo": "3ª edición · 6° aniversario",
       "fecha": "2026-11-07",
+      "publicado": false,
       "artistas": [
         "Claudio Acosta",
         "Gabriel Acosta",
@@ -69,6 +200,7 @@
       "nombre": "La Vuelta de Los Arcanos",
       "subtitulo": "Arcanos del Desierto · ¡La vuelta!",
       "fecha": "2026-11-14",
+      "imagen": "assets/arcanos.webp",
       "artistas": [
         "Arcanos del Desierto",
         "Los Capis",
@@ -89,6 +221,7 @@
       "nombre": "Kijanoss 20 años",
       "subtitulo": "Los Kijanoss · 20 años",
       "fecha": "2026-11-22",
+      "publicado": false,
       "artistas": [
         "Los Kijanoss",
         "Dany Hoyos",
@@ -103,6 +236,7 @@
       "nombre": "Fiesta del Violinero",
       "subtitulo": "La Fiesta del Violinero",
       "fecha": "2026-12-04",
+      "imagen": "assets/garnica-2026.webp",
       "artistas": [
         "Néstor Garnica",
         "invitados"

@@ -10,3 +10,28 @@ body{background:radial-gradient(ellipse 90% 50% at 50% 0%,rgba(64,140,64,.32),tr
 .tarjeta{background:linear-gradient(180deg,rgba(28,63,38,.92),rgba(20,48,28,.92));border-color:rgba(240,181,74,.22);}
 th{background:rgba(20,48,28,.97) !important;}
 .portada img.logo{border-color:#7cc24f;}
+
+/* Logo grande con efecto 3D (07/11, pedido de José): entra girando como una moneda y después flota
+   balanceándose, con un halo verde que late. Sin movimiento si la persona lo pidió en su sistema.
+   Va con ".dentro" en el selector porque este archivo se carga ANTES que los estilos del molde. */
+.portada .dentro{perspective:900px;}
+.portada .dentro img.logo{width:clamp(170px,44vw,240px);height:clamp(170px,44vw,240px);border-width:5px;
+  transform-style:preserve-3d;will-change:transform;
+  animation:logo-entra 1.6s cubic-bezier(.2,.85,.3,1.15) both,logo-flota 7s ease-in-out 1.6s infinite,logo-halo 3.2s ease-out 1.6s infinite;}
+@keyframes logo-entra{
+  0%{opacity:0;transform:rotateY(-540deg) scale(.35);}
+  55%{opacity:1;}
+  100%{opacity:1;transform:rotateY(0) scale(1);}
+}
+@keyframes logo-flota{
+  0%,100%{transform:translateY(0) rotateY(-16deg) rotateX(5deg);}
+  50%{transform:translateY(-12px) rotateY(16deg) rotateX(-5deg);}
+}
+@keyframes logo-halo{
+  0%{box-shadow:0 18px 50px rgba(0,0,0,.55),0 0 0 0 rgba(124,194,79,.6);}
+  100%{box-shadow:0 18px 50px rgba(0,0,0,.55),0 0 0 26px rgba(124,194,79,0);}
+}
+@media (prefers-reduced-motion: reduce){.portada .dentro img.logo{animation:none;}}
+
+/* Cartelera con pocas fechas (07/11: solo Arcanos y Violinero): tarjetas centradas, no corridas a la izquierda */
+#lista.cartelera{grid-template-columns:repeat(auto-fit,minmax(280px,380px));justify-content:center;}

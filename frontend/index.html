@@ -29,6 +29,10 @@ body{background:var(--noche);}
 .portada .cuando{margin-top:12px;font-size:clamp(16px,3.6vw,20px);font-weight:600;}
 .portada .lugar{color:var(--gris);margin-top:4px;}
 .portada .btn{max-width:340px;margin-top:26px;}
+/* Video de fondo (sitio.json → portadaVideo): mudo y en loop, con el mismo degradé encima para que se lea el texto */
+.portada-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;}
+.portada.con-video::after{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.5) 55%,var(--noche) 100%);}
+.portada .dentro{position:relative;z-index:2;}
 .cuenta{display:flex;justify-content:center;gap:10px;margin-top:22px;}
 .cuenta div{min-width:66px;background:rgba(246,240,230,.07);border:1px solid rgba(231,194,125,.25);border-radius:14px;padding:8px 6px;}
 .cuenta b{display:block;font-family:var(--f-display);font-size:28px;line-height:1.1;}
@@ -89,6 +93,45 @@ body{background:var(--noche);}
 #redes{display:block;margin-bottom:10px;}
 .sobre{max-width:720px;margin:18px auto 0;text-align:center;color:var(--crema);font-size:16.5px;line-height:1.7;}
 .sobre p+p{margin-top:12px;}
+/* Galería (sitio.json → galeria): fotos y videos del lugar; al tocar se abren en grande */
+.galeria{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:24px;}
+.galeria button{position:relative;padding:0;border:0;border-radius:14px;overflow:hidden;aspect-ratio:4/3;cursor:zoom-in;background:var(--noche-2);}
+@media (min-width:700px){.galeria{grid-template-columns:repeat(3,1fr);gap:14px;} .galeria button:first-child{grid-column:span 2;grid-row:span 2;aspect-ratio:auto;}
+  .galeria button:first-child img{position:absolute;inset:0;}}  /* que una foto vertical no estire las dos filas */
+.galeria img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s;}
+.galeria button:hover img{transform:scale(1.04);}
+.galeria .play,.videos .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;background:rgba(0,0,0,.55);
+  border:2px solid var(--oro);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;padding-left:4px;}
+/* Galería en pasarela (galeria.pasarela = true): las fotos corren solas en una tira (se frenan al pasar el mouse
+   o al tocarlas) y los videos van aparte, abajo. La tira va dos veces seguida para que el loop no tenga corte. */
+.pasarela{margin:26px -16px 0;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);}
+.pasarela .pista{display:flex;gap:12px;width:max-content;animation:pasarela var(--dur,80s) linear infinite;}
+.pasarela:hover .pista,.pasarela:active .pista,.pasarela:focus-within .pista{animation-play-state:paused;}
+.pasarela button{flex:none;height:clamp(220px,34vw,320px);aspect-ratio:4/5;padding:0;border:0;border-radius:14px;overflow:hidden;cursor:zoom-in;background:var(--noche-2);}
+.pasarela img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s;}
+.pasarela button:hover img{transform:scale(1.06);}
+@keyframes pasarela{to{transform:translateX(calc(-50% - 6px));}}
+@media (prefers-reduced-motion: reduce){.pasarela{overflow-x:auto;} .pasarela .pista{animation:none;}}
+#galeria.con-pasarela{max-width:none;padding-left:0;padding-right:0;}   /* la tira va de borde a borde */
+#galeria.con-pasarela h2,#galeria.con-pasarela .sub,#galeria.con-pasarela .gal-sub{padding:0 16px;}
+#galeria.con-pasarela .pasarela{margin:26px 0 0;}
+#galeria.con-pasarela .videos{max-width:960px;margin-left:auto;margin-right:auto;padding:0 16px;}
+.gal-ayuda{text-align:center;color:var(--gris);font-size:13px;margin-top:12px;}
+.gal-sub{font-family:var(--f-display);font-size:clamp(24px,5vw,32px);text-align:center;margin-top:42px;}
+.videos{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:18px;}
+@media (min-width:700px){.videos{grid-template-columns:repeat(4,1fr);gap:14px;}}
+.videos button{position:relative;padding:0;border:0;border-radius:14px;overflow:hidden;aspect-ratio:9/16;cursor:pointer;background:var(--noche-2);}
+.videos img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s;}
+.videos button:hover img{transform:scale(1.04);}
+.videos .pie{position:absolute;left:0;right:0;bottom:0;padding:28px 10px 10px;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;font-weight:700;font-size:13px;text-align:left;}
+.visor{border:0;padding:0;background:transparent;max-width:min(96vw,1100px);max-height:92vh;margin:auto;overflow:visible;}
+.visor::backdrop{background:rgba(5,8,6,.9);}
+.visor img,.visor video{display:block;max-width:min(96vw,1100px);max-height:82vh;border-radius:12px;margin:0 auto;}
+.visor p{color:var(--crema);text-align:center;font-size:14px;margin-top:10px;}
+.visor .cerrar,.visor .paso{position:fixed;background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:50%;width:44px;height:44px;font-size:22px;cursor:pointer;}
+.visor .cerrar{top:14px;right:14px;}
+.visor .paso{top:50%;transform:translateY(-50%);}
+.visor .paso.ant{left:10px;} .visor .paso.sig{right:10px;}
 .llamado{display:flex;gap:22px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:linear-gradient(135deg,rgba(231,194,125,.16),rgba(231,194,125,.05));
   border:1px solid rgba(231,194,125,.35);border-radius:22px;padding:26px;}
 .llamado > div{flex:1;min-width:240px;}
@@ -139,6 +182,22 @@ body{background:var(--noche);}
   <h2 id="sobre-tit"></h2>
   <div class="sobre" id="sobre-txt"></div>
 </section>
+
+<section class="seccion" id="galeria" hidden>
+  <h2 id="gal-tit"></h2>
+  <p class="sub" id="gal-txt"></p>
+  <div class="galeria" id="gal-lista"></div>
+  <div class="pasarela" id="gal-pasarela" hidden><div class="pista" id="gal-pista"></div></div>
+  <p class="gal-ayuda" id="gal-ayuda" hidden>Tocá una foto para verla en grande</p>
+  <h3 class="gal-sub" id="gal-vid-tit" hidden></h3>
+  <div class="videos" id="gal-videos" hidden></div>
+</section>
+<dialog class="visor" id="visor">
+  <div id="visor-medio"></div><p id="visor-txt"></p>
+  <button type="button" class="cerrar" id="visor-cerrar" aria-label="Cerrar">✕</button>
+  <button type="button" class="paso ant" id="visor-ant" aria-label="Anterior">‹</button>
+  <button type="button" class="paso sig" id="visor-sig" aria-label="Siguiente">›</button>
+</dialog>
 
 <section class="seccion" id="feriantes" hidden>
   <div class="llamado">
@@ -226,7 +285,52 @@ function tarjeta(e) {
     </div></article>`;
 }
 
-fetch('/api/config').then(r => r.json()).then(c => {
+// Galería: grilla de fotos (las que tienen video llevan ▶) y un visor con anterior/siguiente.
+// Con galeria.pasarela, las fotos corren en una tira y los videos van aparte; el visor recorre solo su grupo.
+function galeria(g) {
+  $('#galeria').hidden = false; $('#gal-tit').textContent = g.titulo; $('#gal-txt').textContent = g.texto || '';
+  const boton = (it, i, copia) => `<button type="button" data-i="${i}" aria-label="${esc(it.alt || 'Ver en grande')}"${copia ? ' tabindex="-1" aria-hidden="true"' : ''}>
+    <img src="${esc(it.mini || it.foto)}" alt="${esc(it.alt)}" loading="lazy">${it.video ? `<span class="play">▶</span>${g.pasarela ? `<span class="pie">${esc(it.alt)}</span>` : ''}` : ''}</button>`;
+  const visor = $('#visor'); let lista = g.items, actual = 0;
+  const mostrar = i => {
+    actual = (i + lista.length) % lista.length; const it = lista[actual];
+    $('#visor-medio').innerHTML = it.video
+      ? `<video src="${esc(it.video)}" poster="${esc(it.foto)}" controls autoplay playsinline></video>`
+      : `<img src="${esc(it.foto)}" alt="${esc(it.alt)}">`;
+    $('#visor-txt').textContent = it.alt || '';
+    $('#visor-ant').hidden = $('#visor-sig').hidden = lista.length < 2;
+  };
+  const alTocar = (cont, grupo) => cont.addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-i]'); if (b) { lista = grupo; mostrar(Number(b.dataset.i)); visor.showModal(); }
+  });
+  if (g.pasarela) {
+    const fotos = g.items.filter(it => !it.video), videos = g.items.filter(it => it.video);
+    $('#galeria').classList.add('con-pasarela');
+    if (fotos.length) {
+      $('#gal-pasarela').hidden = $('#gal-ayuda').hidden = false;
+      $('#gal-pista').innerHTML = fotos.map((it, i) => boton(it, i)).join('') + fotos.map((it, i) => boton(it, i, true)).join('');
+      $('#gal-pista').style.setProperty('--dur', `${fotos.length * 4}s`);   // unos 4 segundos por foto
+      alTocar($('#gal-pista'), fotos);
+    }
+    if (videos.length) {
+      $('#gal-vid-tit').hidden = $('#gal-videos').hidden = false; $('#gal-vid-tit').textContent = g.tituloVideos || 'Videos';
+      $('#gal-videos').innerHTML = videos.map((it, i) => boton(it, i)).join('');
+      alTocar($('#gal-videos'), videos);
+    }
+  } else {
+    $('#gal-lista').innerHTML = g.items.map((it, i) => boton(it, i)).join('');
+    alTocar($('#gal-lista'), g.items);
+  }
+  $('#visor-ant').onclick = () => mostrar(actual - 1); $('#visor-sig').onclick = () => mostrar(actual + 1);
+  $('#visor-cerrar').onclick = () => visor.close();
+  visor.addEventListener('click', ev => { if (ev.target === visor) visor.close(); });
+  // corta el video al cerrar (el evento llega después: si ya se abrió otro, no lo borra)
+  visor.addEventListener('close', () => { if (!visor.open) $('#visor-medio').innerHTML = ''; });
+  document.addEventListener('keydown', ev => { if (!visor.open) return; if (ev.key === 'ArrowLeft') mostrar(actual - 1); if (ev.key === 'ArrowRight') mostrar(actual + 1); });
+}
+
+// Vista previa estática (herramientas/vista-previa.mjs, GitHub Pages): los datos vienen copiados en la página
+(window.VISTA_PREVIA ? Promise.resolve(window.VISTA_PREVIA) : fetch('/api/config').then(r => r.json())).then(c => {
   const s = c.sitio, eventos = c.eventos || [];
   const gala = s.modo === 'gala' && eventos.length === 1;
   const e0 = eventos[0];
@@ -267,6 +371,14 @@ fetch('/api/config').then(r => r.json()).then(c => {
     $('#sobre').hidden = false; $('#sobre-tit').textContent = s.sobre.titulo;
     $('#sobre-txt').innerHTML = s.sobre.parrafos.map(p => `<p>${esc(p)}</p>`).join('');
   }
+  if (s.galeria) galeria(s.galeria);
+  if (s.portadaVideo && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const v = document.createElement('video');
+    const vertical = s.portadaVideoMovil && matchMedia('(orientation: portrait)').matches;
+    Object.assign(v, { className: 'portada-video', src: vertical ? s.portadaVideoMovil : s.portadaVideo, muted: true, loop: true, autoplay: true, playsInline: true });
+    v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
+    $('.portada').prepend(v); $('.portada').classList.add('con-video');
+  }
   if (s.feriantes) {
     $('#feriantes').hidden = false; $('#fer-tit').textContent = s.feriantes.titulo; $('#fer-txt').textContent = s.feriantes.texto;
     $('#fer-btn').href = `https://wa.me/${encodeURIComponent(s.feriantes.whatsapp)}${s.feriantes.mensaje ? '?text=' + encodeURIComponent(s.feriantes.mensaje) : ''}`;
@@ -287,7 +399,14 @@ fetch('/api/config').then(r => r.json()).then(c => {
     ['¿Y si pierdo el mail?', 'Entrá a <a href="/mis-entradas">Mis entradas</a> con el email y el DNI que usaste al comprar.'],
     ['¿Cómo entro?', 'Mostrás el QR en la puerta, desde el celular o impreso. Cada QR sirve una sola vez, solo para la fecha que compraste, y cada persona necesita el suyo.'],
   ].map(([p, r]) => `<details><summary>${p}</summary><p>${r}</p></details>`).join('');
-  fetch('/api/visita', { method: 'POST' }).catch(() => {});
+  if (c.vistaPrevia) {
+    // En la copia no hay sistema detrás: comprar y "Mis entradas" avisan en vez de llevar a una página que no existe
+    document.body.insertAdjacentHTML('afterbegin', '<div style="position:fixed;top:10px;left:10px;z-index:50;background:rgba(0,0,0,.6);color:#fff;font:700 11px/1 Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:7px 11px;border-radius:999px">Vista previa</div>');
+    document.addEventListener('click', ev => {
+      if (!ev.target.closest('a[href^="/comprar"], a[href^="/mis-entradas"]')) return;
+      ev.preventDefault(); alert('Esta es una vista previa: la compra de entradas se habilita cuando la página esté publicada.');
+    });
+  } else fetch('/api/visita', { method: 'POST' }).catch(() => {});
 }).catch(() => {});
 </script>
 </body>
