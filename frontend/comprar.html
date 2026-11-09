@@ -22,6 +22,7 @@
 .tipo .que b{display:block;font-weight:800;font-size:16px;}
 .tipo .que small{display:block;color:var(--gris);font-size:12.5px;}
 .tipo .precio{text-align:right;font-family:var(--f-display);font-weight:700;font-size:23px;line-height:1;}
+.tipo .precio small.serv{display:block;margin-top:4px;font-family:var(--f-texto);font-size:11px;font-weight:700;color:var(--gris);}
 .tipo:has(input:checked){border-color:var(--oro);background:rgba(231,194,125,.1);}
 .tipo.agotado{opacity:.45;cursor:not-allowed;}
 .tipo .estado{position:absolute;top:-9px;right:12px;font-weight:800;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
@@ -83,7 +84,8 @@
         </div>
       </div>
       <div class="resumen">
-        <div><span id="r-linea">—</span></div>
+        <div><span id="r-linea">—</span><span id="r-sub"></span></div>
+        <div id="r-serv" hidden><span>Costo de servicio</span><span id="r-serv-m"></span></div>
         <div class="total"><span>Total</span><b id="r-total">—</b></div>
       </div>
     </section>
@@ -128,6 +130,17 @@ const pesos = n => '$' + Number(n).toLocaleString('es-AR');
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 let CFG = null, EV = null, tipo = null, cant = 1;
+// Con desgloseServicio (sitio.json) se muestra el precio del organizador "+ costo de servicio" y el resumen
+// separa entradas, servicio y total. Si no, un solo precio final.
+const desglose = () => Boolean(CFG?.sitio?.desgloseServicio);
+const aMostrar = t => desglose() ? t.precio : t.final;
+const SERV = () => desglose() ? '<small class="serv">+ servicio</small>' : '';
+// Igual que el servidor (importes): el cargo se calcula sobre el subtotal de la compra y se redondea una vez.
+function importes(t, n) {
+  if (!desglose() || CFG.cargoPct == null) return { subtotal: t.final * n, cargo: 0, total: t.final * n };
+  const subtotal = t.precio * n, cargo = Math.round(subtotal * CFG.cargoPct / 100);
+  return { subtotal, cargo, total: subtotal + cargo };
+}
 const params = new URLSearchParams(location.search);
 const pedido = params.get('tipo'), pedidoEvento = params.get('evento');
 const SDK = 'https://unpkg.com/@chytapay/integration-widget@1.6.0';   // versión fija: un cambio de ellos no nos cambia la página
@@ -149,11 +162,11 @@ function pintarFechas() {
   }
   $('#fechas').innerHTML = lista.map(e => {
     const [mes, dia] = talon(e);
-    const desde = Math.min(...Object.values(e.tipos).map(t => t.final));
+    const desde = Math.min(...Object.values(e.tipos).map(aMostrar));
     return `<label class="tipo"><input type="radio" name="fecha" value="${esc(e.id)}">
       <span class="talon"><small>${esc(mes)}</small><b>${esc(dia)}</b></span>
       <span class="que"><b>${esc(e.nombre)}</b><small>${esc(e.artistas?.join(', ') || e.cuando)}</small></span>
-      <span class="precio">${pesos(desde)}</span></label>`;
+      <span class="precio">${pesos(desde)}${SERV()}</span></label>`;
   }).join('');
   document.querySelectorAll('input[name=fecha]').forEach(r => r.addEventListener('change', () => { EV = CFG.eventos.find(e => e.id === r.value); tipo = null; pintarFechas(); pintarTipos(); actualizar(); }));
 }
@@ -167,7 +180,7 @@ function pintarTipos() {
       <input type="radio" name="tipo" value="${esc(k)}" ${agotado ? 'disabled' : ''}>${marca}
       <span class="talon"><small>${esc(mes)}</small><b>${esc(dia)}</b></span>
       <span class="que"><b>${esc(t.nombre)}</b><small>${esc(t.detalle || '')}</small></span>
-      <span class="precio">${pesos(t.final)}</span></label>`;
+      <span class="precio">${pesos(aMostrar(t))}${SERV()}</span></label>`;
   }).join('');
   document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', () => { tipo = r.value; actualizar(); }));
   const inicial = [tipo, pedido, ...Object.keys(EV.tipos)].find(k => k && EV.tipos[k] && EV.tipos[k].estado !== 'agotado');
@@ -175,14 +188,17 @@ function pintarTipos() {
 }
 function actualizar() {
   const t = EV && tipo && EV.tipos[tipo];
-  if (!t) { $('#r-linea').textContent = '—'; $('#r-total').textContent = '—'; $('#pagar').textContent = 'Ir a pagar'; }
+  if (!t) { $('#r-linea').textContent = '—'; $('#r-sub').textContent = ''; $('#r-serv').hidden = true; $('#r-total').textContent = '—'; $('#pagar').textContent = 'Ir a pagar'; }
   $('#cant').textContent = cant;
   $('#menos').disabled = cant <= 1; $('#mas').disabled = cant >= CFG.maxEntradas;
   if (!t) return;
-  // Un solo precio, sin costo de servicio aparte.
-  $('#r-linea').textContent = `${cant} × ${t.nombre} (${pesos(t.final)})`;
-  $('#r-total').textContent = pesos(t.final * cant);
-  $('#pagar').textContent = `Ir a pagar ${pesos(t.final * cant)}`;
+  const m = importes(t, cant);
+  $('#r-linea').textContent = `${cant} × ${t.nombre} (${pesos(aMostrar(t))})`;
+  // Desglose: entradas, costo de servicio y total. Sin desglose: un solo precio, sin servicio aparte.
+  $('#r-sub').textContent = desglose() ? pesos(m.subtotal) : '';
+  $('#r-serv').hidden = !desglose(); $('#r-serv-m').textContent = pesos(m.cargo);
+  $('#r-total').textContent = pesos(m.total);
+  $('#pagar').textContent = `Ir a pagar ${pesos(m.total)}`;
 }
 $('#menos').onclick = () => { if (cant > 1) { cant--; actualizar(); } };
 $('#mas').onclick = () => { if (cant < CFG.maxEntradas) { cant++; actualizar(); } };

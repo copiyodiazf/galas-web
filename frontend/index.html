@@ -60,6 +60,8 @@ body{background:var(--noche);}
 .pena .info .pie-pena{margin-top:auto;padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .pena .precio{font-family:var(--f-display);font-size:26px;color:var(--oro-vivo);}
 .pena .precio small{display:block;font-family:var(--f-texto);font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--gris);}
+/* "+ costo de servicio" debajo del precio (sitio.json → desgloseServicio) */
+.precio small.serv{display:block;margin-top:3px;font-family:var(--f-texto);font-size:11.5px;font-weight:700;letter-spacing:.01em;text-transform:none;color:var(--gris);}
 .pena .btn{width:auto;padding:12px 18px;font-size:14px;}
 .pena .pronto{font-weight:800;font-size:13px;color:var(--gris);text-transform:uppercase;letter-spacing:.08em;}
 /* Gala (un solo evento): entradas */
@@ -236,6 +238,10 @@ body{background:var(--noche);}
 <script>
 const $ = s => document.querySelector(s);
 const pesos = n => '$' + Number(n).toLocaleString('es-AR');
+// Con desgloseServicio la página muestra el precio del organizador "+ costo de servicio"; si no, el precio final.
+let DESGLOSE = false;
+const aMostrar = t => DESGLOSE ? t.precio : t.final;
+const SERV = () => DESGLOSE ? '<small class="serv">+ costo de servicio</small>' : '';
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const sello = estado => estado === 'agotado' ? '<span class="sello">Agotado</span>' : estado === 'pocas' ? '<span class="sello pocas">Quedan pocas</span>' : '';
@@ -258,7 +264,7 @@ function cuentaRegresiva(fecha, hora) {
 // Una tarjeta por fecha de la cartelera
 function tarjeta(e) {
   const [, m, d] = e.fecha.split('-').map(Number);
-  const precios = Object.values(e.tipos).map(t => t.final);
+  const precios = Object.values(e.tipos).map(aMostrar);
   // Con un solo tipo, si no es la entrada general se muestra su nombre (ej. "Primeras anticipadas").
   const unico = precios.length === 1 ? Object.values(e.tipos)[0].nombre : '';
   const rotulo = precios.length > 1 ? 'Desde' : unico && !/general/i.test(unico) ? unico : 'Entrada';
@@ -268,7 +274,7 @@ function tarjeta(e) {
     ? `<div class="ext">${e.externo.precio ? `<b>${esc(e.externo.precio)}</b>` : ''}<span>${esc(e.externo.url ? 'Se vende en su ticketera' : (e.externo.texto || 'Venta en ticketera oficial'))}</span></div>`
       + (e.externo.url ? `<a class="btn" href="${esc(e.externo.url)}" target="_blank" rel="noopener">${esc(e.externo.texto || 'Comprar')}</a>` : '')
     : e.vendible && est !== 'agotado'
-    ? `<span class="precio"><small>${esc(rotulo)}</small>${pesos(Math.min(...precios))}</span><a class="btn" href="/comprar?evento=${encodeURIComponent(e.id)}">Comprar</a>`
+    ? `<span class="precio"><small>${esc(rotulo)}</small>${pesos(Math.min(...precios))}${SERV()}</span><a class="btn" href="/comprar?evento=${encodeURIComponent(e.id)}">Comprar</a>`
     : `<span class="pronto">${est === 'agotado' ? 'Entradas agotadas' : 'Entradas muy pronto'}</span>`;
   const mas = e.descripcion ? `<details class="mas"><summary>Ver más</summary>${e.descripcion.split(/\n+/).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('')}</details>` : '';
   return `<article class="pena">
@@ -332,6 +338,7 @@ function galeria(g) {
 // Vista previa estática (herramientas/vista-previa.mjs, GitHub Pages): los datos vienen copiados en la página
 (window.VISTA_PREVIA ? Promise.resolve(window.VISTA_PREVIA) : fetch('/api/config').then(r => r.json())).then(c => {
   const s = c.sitio, eventos = c.eventos || [];
+  DESGLOSE = Boolean(s.desgloseServicio);
   const gala = s.modo === 'gala' && eventos.length === 1;
   const e0 = eventos[0];
   if (gala) {
@@ -343,7 +350,7 @@ function galeria(g) {
     $('#lista').className = 'entradas';
     $('#lista').innerHTML = Object.entries(e0.tipos).map(([k, t]) => {
       const boton = e0.vendible && t.estado !== 'agotado' ? `<a class="btn" href="/comprar?evento=${encodeURIComponent(e0.id)}&tipo=${encodeURIComponent(k)}">Comprar</a>` : '';
-      return `<div class="entrada">${sello(t.estado)}<b>${esc(t.nombre)}</b><small>${esc(t.detalle || '')}</small><div class="precio">${pesos(t.final)}</div>${boton}</div>`;
+      return `<div class="entrada">${sello(t.estado)}<b>${esc(t.nombre)}</b><small>${esc(t.detalle || '')}</small><div class="precio">${pesos(aMostrar(t))}${SERV()}</div>${boton}</div>`;
     }).join('') || '<p class="sub">Las entradas salen a la venta muy pronto.</p>';
     if (e0.vendible) { $('#btn-principal').textContent = 'Comprar entradas'; $('#btn-principal').href = `/comprar?evento=${encodeURIComponent(e0.id)}`; $('#btn-barra').href = $('#btn-principal').href; $('#barra').classList.add('visible'); }
     else { $('#btn-principal').textContent = 'Entradas muy pronto'; $('#btn-principal').removeAttribute('href'); $('#btn-principal').style.opacity = '.7'; $('#sub-entradas').textContent = 'La venta online abre muy pronto.'; }

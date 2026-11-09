@@ -9,6 +9,7 @@
   "ayudaWhatsapp": "",
   "menores": "",
   "modo": "cartelera",
+  "desgloseServicio": true,
   "sobre": {
     "titulo": "El patio",
     "parrafos": [
@@ -208,10 +209,10 @@
       ],
       "tipos": [
         {
-          "id": "anticipada",
-          "nombre": "Primeras anticipadas",
-          "corto": "Anticipada",
-          "precio": 10000,
+          "id": "general",
+          "nombre": "Entrada general",
+          "corto": "General",
+          "precio": 15000,
           "cupo": 2000
         }
       ],

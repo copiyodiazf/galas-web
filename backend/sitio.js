@@ -116,6 +116,9 @@ export function leerSitio(archivo = process.env.SITIO_ARCHIVO || 'sitio.json') {
       // true = los precios de la ficha son lo que PAGA el público, con el cargo adentro (la academia
       // recibe precio / 1,10). false (el de siempre) = son lo que recibe la academia y el cargo va encima.
       precioIncluyeCargo: s.precioIncluyeCargo === true,
+      // true = la página muestra el precio del organizador "+ costo de servicio" y la compra desglosa
+      // entradas, servicio y total (Patio de Oli, 09/11). Sin eso, un solo precio final en todos lados.
+      desgloseServicio: s.desgloseServicio === true && s.precioIncluyeCargo !== true,
       mail: coloresMail(s.mail || {}),
       // Secciones opcionales de la página: quiénes somos y el llamado a feriantes/emprendedores.
       sobre: s.sobre?.titulo ? { titulo: limpio(s.sobre.titulo, 80), parrafos: (s.sobre.parrafos || []).map(p => limpio(p, 600)).filter(Boolean).slice(0, 6) } : null,

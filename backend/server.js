@@ -1282,7 +1282,7 @@ app.get('/api/config', async (_req, res) => {
   res.set('Cache-Control', 'no-cache')
   const online = VENTA_ABIERTA && chytapayConfigurado()
   res.json({
-    ventaAbierta: online, maxEntradas: MAX_ENTRADAS, cargoPuntoPct: CARGO_PUNTO_PCT, reservaMinutos: RESERVA_MINUTOS,
+    ventaAbierta: online, maxEntradas: MAX_ENTRADAS, cargoPct: CARGO_PCT, cargoPuntoPct: CARGO_PUNTO_PCT, reservaMinutos: RESERVA_MINUTOS,
     sitio: SITIO,
     eventos: [...EVENTOS.values()].filter(e => Number(e.publicado) && noPaso(e)).map(e => ({
       id: e.id, nombre: e.nombre, subtitulo: e.subtitulo, fecha: e.fecha, hora: e.hora, cuando: cuandoDe(e), puertas: e.puertas,
