@@ -559,7 +559,7 @@ async function demasiadasPendientes(v, ip) {
   const corte = new Date(Date.now() - RESERVA_MINUTOS * 60 * 1000)
   const mias = await Orden.count({ where: { estado: 'pendiente', metodo: 'chytapay', createdAt: { [Op.gte]: corte },
     [Op.or]: [{ dni: v.dni }, { email: v.email }] } })
-  if (mias >= MAX_PENDIENTES) return 'Ya tenés compras empezadas sin pagar. Terminá de pagar una o esperá unos minutos.'
+  if (mias >= MAX_PENDIENTES) return `Ya tenés ${mias} compras empezadas sin pagar. Para retomar una, pedí la misma cantidad de entradas y tocá «Ir a pagar» de nuevo; si no, esperá ${RESERVA_MINUTOS} minutos.`
   if (pendientesPorIp.size > 50000) pendientesPorIp.clear()   // nunca crece sin límite
   const lista = (pendientesPorIp.get(ip) || []).filter(x => x.t > corte.getTime())
   pendientesPorIp.set(ip, lista)
@@ -569,6 +569,13 @@ async function demasiadasPendientes(v, ip) {
   }
   return null
 }
+// La misma compra de la misma persona (DNI y email), todavía pendiente y con tiempo para pagar: se
+// retoma ese cobro en vez de crear otro. Pasa cuando la pantalla de pago no abrió y vuelve a tocar
+// "Ir a pagar": antes quedaba frenada por el tope de compras sin pagar.
+const RETOMAR_MINIMO = 5   // minutos que le tienen que quedar al cobro para retomarlo
+const compraParaRetomar = v => Orden.findOne({ where: { estado: 'pendiente', metodo: 'chytapay', paymentId: { [Op.ne]: null },
+  createdAt: { [Op.gte]: new Date(Date.now() - (RESERVA_MINUTOS - RETOMAR_MINIMO) * 60000) },
+  evento: v.evento, tipo: v.tipo, cantidad: v.cantidad, dni: v.dni, email: v.email }, order: [['createdAt', 'DESC']] })
 
 app.post('/api/orders', rateLimit({ windowMs: 60000, max: 30 }), async (req, res) => {
   try {
@@ -576,6 +583,12 @@ app.post('/api/orders', rateLimit({ windowMs: 60000, max: 30 }), async (req, res
     if (!chytapayConfigurado()) return res.status(503).json({ error: 'El cobro online no está disponible en este momento.' })
     const v = validarCompra(req.body || {})
     if (v.error) return res.status(400).json({ error: v.error })
+    const previa = await compraParaRetomar(v)
+    if (previa) {
+      const minutos = Math.max(1, Math.floor((new Date(previa.createdAt).getTime() + RESERVA_MINUTOS * 60000 - Date.now()) / 60000))
+      console.log(`🔁 Compra retomada: ${previa.id} · ${pesos(previa.total)}`)
+      return res.json({ orderId: previa.id, pago: { paymentId: previa.paymentId, pk: clavePublicable(), minutos }, total: previa.total, retomada: true })
+    }
     const ip = ipDe(req)
     const freno = await demasiadasPendientes(v, ip)
     if (freno) return res.status(429).json({ error: freno })
@@ -701,6 +714,24 @@ app.post('/api/orders/:id/confirmar', rateLimit({ windowMs: 60000, max: 120 }), 
     console.error('❌ Error confirmando la orden:', e?.message || e)
     res.status(500).json({ error: 'No se pudo verificar el pago' })
   }
+})
+
+// Traza de la pantalla de pago (la manda comprar.html): un paso por llamada, con la hora argentina.
+// La primera línea lleva el navegador. Solo compras online de las últimas 2 horas y hasta ~6.000 letras.
+app.post('/api/orders/:id/traza', rateLimit({ windowMs: 60000, max: 60 }), async (req, res) => {
+  res.sendStatus(204)
+  try {
+    const paso = String(req.body?.paso || '').replace(/[\u0000-\u001f|]/g, ' ').trim().slice(0, 200)
+    const orden = paso && await Orden.findByPk(String(req.params.id).slice(0, 60), { attributes: ['id', 'metodo', 'createdAt', 'traza'] })
+    if (!orden || orden.metodo !== 'chytapay' || Date.now() - new Date(orden.createdAt).getTime() > 2 * 3600e3) return
+    if ((orden.traza || '').length > 6000) return
+    const linea = `${new Date(Date.now() - 3 * 3600e3).toISOString().slice(11, 19)} ${paso}`
+    const ua = String(req.headers['user-agent'] || '?').replace(/[\u0000-\u001f|]/g, ' ').slice(0, 250)
+    // Se arma en la base: los pasos llegan casi juntos y ninguno pisa al otro (ni se repite el navegador).
+    const e = x => sequelize.escape(x)
+    await Orden.update({ traza: sequelize.literal(`IF(traza IS NULL OR traza = '', ${e(`[${ua}] ${linea}`)}, CONCAT(traza, ${e(' | ' + linea)}))`) },
+      { where: { id: orden.id } })
+  } catch (e) { console.error('⚠️ Traza de pago:', e?.message || e) }
 })
 
 // "Mis entradas": recuperar las entradas pagadas con email + DNI.

@@ -107,6 +107,7 @@
       <p style="font-size:14px;">Te damos un número de cuenta (CVU) para transferir desde la app de tu banco o tu billetera:</p>
       <div class="medios"><span>Mercado Pago</span><span>Ualá</span><span>Naranja X</span><span>MODO</span><span>Cualquier banco</span></div>
       <div class="importante"><b>Importante:</b> transferí desde una cuenta <b>a tu nombre</b> y, cuando te lo pida, poné el DNI del titular de esa cuenta. Si transfiere otra persona, el pago no se reconoce solo.</div>
+      <div class="importante" id="en-app" hidden><b>Estás viendo esto dentro de una app</b> (Instagram, Facebook o TikTok). Para que la pantalla de pago abra sin problemas, tocá el menú <b>⋯</b> y elegí <b>Abrir en el navegador</b>.</div>
       <div class="error" id="error" role="alert"></div>
       <button class="btn" id="pagar" type="submit" style="margin-top:16px;">Ir a pagar</button>
       <p class="ayuda centro" id="reserva" style="margin-top:8px;"></p>
@@ -143,7 +144,14 @@ function importes(t, n) {
 }
 const params = new URLSearchParams(location.search);
 const pedido = params.get('tipo'), pedidoEvento = params.get('evento');
-const SDK = 'https://unpkg.com/@chytapay/integration-widget@1.6.0';   // versión fija: un cambio de ellos no nos cambia la página
+// El SDK de Chytapay lo servimos nosotros (copia de npm @chytapay/integration-widget 1.7.0, dist/sdk.iife.js):
+// la compra no depende de unpkg y un cambio de ellos no nos cambia la página. Para actualizarlo, bajar la
+// versión nueva con npm pack, copiarla a vendor/ y cambiar este nombre.
+const SDK = '/vendor/chytapay-sdk-1.7.0.js';
+const SDK_ESPERA = 15000;        // si el SDK no carga en este tiempo, se avisa
+const PANTALLA_ESPERA = 25000;   // si la pantalla de Chytapay no avisa que está lista, se cierra y se explica qué hacer
+// Navegadores internos de apps (Instagram, Facebook, TikTok…): ahí la pantalla de pago a veces no abre.
+const EN_APP = /Instagram|FBAN|FBAV|FB_IAB|musical_ly|BytedanceWebview|TikTok|Snapchat|Line\//i.test(navigator.userAgent);
 
 const talon = ev => { const [, m, d] = String(ev.fecha || '').split('-').map(Number); return d ? [MESES[m - 1], d] : ['', '★']; };
 const vendibles = () => CFG.eventos.filter(e => e.vendible);
@@ -214,10 +222,41 @@ function refrescar() {
 }
 function cargarSDK() {
   if (window.ChytaPay) return Promise.resolve();
-  return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = SDK; s.onload = ok; s.onerror = () => mal(new Error('No cargó la pantalla de pago. Revisá tu conexión.')); document.head.appendChild(s); });
+  return new Promise((ok, mal) => {
+    const falla = () => mal(new Error('No cargó la pantalla de pago. Revisá tu conexión y tocá «Ir a pagar» de nuevo: tu compra sigue guardada.'));
+    const t = setTimeout(falla, SDK_ESPERA);
+    const s = document.createElement('script'); s.src = SDK;
+    s.onload = () => { clearTimeout(t); ok(); }; s.onerror = () => { clearTimeout(t); falla(); };
+    document.head.appendChild(s);
+  });
 }
 const exito = orden => location.href = '/pago-exitoso?orden=' + encodeURIComponent(orden);
 function reactivar() { $('#pagar').disabled = false; actualizar(); }
+
+// ── Traza: qué pasa con la pantalla de pago en este celular (pasos y pedidos a Chytapay, sin datos personales).
+let ORDEN = null, LISTA = false, PASOS = 0;
+const fetchOriginal = window.fetch.bind(window);
+function traza(paso) {
+  if (!ORDEN || ++PASOS > 40) return;
+  fetchOriginal(`/api/orders/${encodeURIComponent(ORDEN)}/traza`, { method: 'POST', keepalive: true,
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paso }) }).catch(() => {});
+}
+// El SDK de Chytapay corre en esta página: sus pedidos a la API quedan anotados con el estado y la demora.
+window.fetch = async (url, op) => {
+  const u = String(url?.url || url);
+  if (!ORDEN || !/chytapay\.com\.ar\/v1\//.test(u) || /widget-events/.test(u)) return fetchOriginal(url, op);
+  const ruta = `${op?.method || 'GET'} ${u.replace(/^https:\/\/[^/]+/, '').replace(/\?.*/, '').replace(/[0-9a-f]{8}-[0-9a-f-]{27}/gi, ':id')}`;
+  const t0 = performance.now(), ms = () => Math.round(performance.now() - t0) + 'ms';
+  try { const r = await fetchOriginal(url, op); traza(`${ruta} → ${r.status} ${ms()}`); return r; }
+  catch (e) { traza(`${ruta} → FALLÓ (${e?.name || 'error'}) ${ms()}`); throw e; }
+};
+// Lo que la pantalla de Chytapay le avisa a esta página (lista, DNI ingresado, abrir Mercado Pago…).
+window.addEventListener('message', ev => {
+  if (!/^https:\/\/widget(-test)?\.chytapay\.com\.ar$/.test(ev.origin)) return;
+  const tipo = String(ev.data?.type || '').replace(/^chytapay:/, '');
+  if (tipo === 'ready') LISTA = true;
+  if (tipo && tipo !== 'height') traza('pantalla: ' + tipo.slice(0, 40));
+});
 
 async function abrirPago(d) {
   if (d.pago.pk === 'simulado') {
@@ -226,14 +265,27 @@ async function abrirPago(d) {
     $('#sim-cancelar').onclick = () => { $('#simulado').classList.remove('abierto'); reactivar(); };
     return;
   }
-  await cargarSDK();
+  const t0 = performance.now();
+  try { await cargarSDK(); } catch (e) { traza('SDK no cargó'); throw e; }
+  traza(`SDK cargado ${Math.round(performance.now() - t0)}ms${EN_APP ? ' · navegador de app' : ''}`);
   ChytaPay.init({ pk: d.pago.pk });
-  ChytaPay.checkout({
+  LISTA = false;
+  let mano = null;
+  // Si la pantalla de Chytapay no termina de abrir, no queda girando para siempre: se cierra y se explica qué hacer.
+  const vigia = setTimeout(() => {
+    if (LISTA) return;
+    traza(`la pantalla no abrió en ${PANTALLA_ESPERA / 1000} s`);
+    try { mano?.close(); } catch {}
+    error(`La pantalla de pago no terminó de abrir. Tu compra sigue guardada: tocá «Ir a pagar» de nuevo. Si vuelve a pasar, ${EN_APP ? 'abrí esta página en el navegador (menú ⋯ › Abrir en el navegador), ' : 'probá con Chrome o Safari, '}con otra conexión (wifi o datos) o desde una computadora.`);
+    reactivar();
+  }, PANTALLA_ESPERA);
+  mano = ChytaPay.checkout({
     paymentId: d.pago.paymentId,
     // onSuccess es solo para la pantalla: la entrada la emite el aviso firmado que le llega al servidor.
-    onSuccess: () => exito(d.orderId),
-    onError: () => { error('El pago venció o no se pudo completar. Si ya transferiste, no transfieras de nuevo: revisá tu correo o Mis entradas.'); reactivar(); refrescar(); },
-    onCancel: () => { reactivar(); },
+    onSuccess: () => { clearTimeout(vigia); traza('pagó'); exito(d.orderId); },
+    onError: e => { clearTimeout(vigia); traza('error: ' + String(e?.message || e).slice(0, 80)); error('El pago venció o no se pudo completar. Si ya transferiste, no transfieras de nuevo: revisá tu correo o Mis entradas.'); reactivar(); refrescar(); },
+    onCancel: () => { clearTimeout(vigia); traza('cerró la pantalla'); reactivar(); },
+    onWalletOpen: w => traza(`Mercado Pago: ${w?.opened === false ? 'no abrió' : 'abrió'} (${[w?.browser, w?.os].filter(Boolean).join(', ')})`),
     theme: { '--chytapay-primary': getComputedStyle(document.documentElement).getPropertyValue('--oro').trim() || '#e7c27d' },
   });
 }
@@ -252,7 +304,9 @@ $('#compra').addEventListener('submit', async ev => {
     const r = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'No se pudo iniciar la compra.');
-    b.textContent = 'Pagando…';
+    ORDEN = d.orderId; PASOS = 0;
+    traza(d.retomada ? `compra retomada (quedan ${d.pago.minutos} min)` : 'compra creada');
+    b.textContent = 'Abriendo el pago…';
     await abrirPago(d);
   } catch (e) {
     error(e.message); reactivar(); refrescar();
@@ -281,6 +335,7 @@ fetch('/api/config').then(r => r.json()).then(c => {
     $('#compra').style.display = 'none'; $('#cerrada').style.display = 'block'; return;
   }
   if (c.sandbox) $('#sandbox').hidden = false;
+  if (EN_APP) $('#en-app').hidden = false;
   EV = lista.find(e => e.id === pedidoEvento) || (lista.length === 1 ? lista[0] : null);
   $('#reserva').textContent = `Te guardamos el lugar ${c.reservaMinutos} minutos mientras pagás.`;
   pintarFechas(); pintarTipos(); actualizar();

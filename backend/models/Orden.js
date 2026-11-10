@@ -27,6 +27,9 @@ const Orden = sequelize.define('Orden', {
   pagador:   { type: DataTypes.STRING, allowNull: true },    // titular de la cuenta que transfirió (lo informa Chytapay)
   pagadaEn:  { type: DataTypes.DATE, allowNull: true },
   avisadoEn: { type: DataTypes.DATE, allowNull: true },      // recordatorio por compra a medio camino
+  // Qué pasó con la pantalla de pago en el celular del comprador: navegador, pasos del checkout y
+  // pedidos a Chytapay con su demora. Sin datos personales. Sirve para saber dónde se traba el que no paga.
+  traza:     { type: DataTypes.TEXT, allowNull: true },
 }, {
   tableName: 'ordenes',
   timestamps: true,
