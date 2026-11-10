@@ -109,6 +109,7 @@
       <div class="importante"><b>Importante:</b> transferí desde una cuenta <b>a tu nombre</b> y, cuando te lo pida, poné el DNI del titular de esa cuenta. Si transfiere otra persona, el pago no se reconoce solo.</div>
       <div class="importante" id="en-app" hidden><b>Estás viendo esto dentro de una app</b> (Instagram, Facebook o TikTok). Para que la pantalla de pago abra sin problemas, tocá el menú <b>⋯</b> y elegí <b>Abrir en el navegador</b>.</div>
       <div class="error" id="error" role="alert"></div>
+      <div class="importante" id="ya-transferi" role="status" hidden></div>
       <button class="btn" id="pagar" type="submit" style="margin-top:16px;">Ir a pagar</button>
       <p class="ayuda centro" id="reserva" style="margin-top:8px;"></p>
     </section>
@@ -234,21 +235,41 @@ const exito = orden => location.href = '/pago-exitoso?orden=' + encodeURICompone
 function reactivar() { $('#pagar').disabled = false; actualizar(); }
 
 // ── Traza: qué pasa con la pantalla de pago en este celular (pasos y pedidos a Chytapay, sin datos personales).
+// Lo que se repite seguido (la pantalla pregunta cada 5 s si ya llegó la plata) va resumido: la primera vez
+// entera y después una línea por cada 12, así entra el intento completo.
 let ORDEN = null, LISTA = false, PASOS = 0;
+let CVU_DADO = false;   // Chytapay ya le dio el CVU: puede haber transferido aunque cierre la pantalla
+const REPE = { clave: '', n: 0, max: 0 };
 const fetchOriginal = window.fetch.bind(window);
-function traza(paso) {
-  if (!ORDEN || ++PASOS > 40) return;
+function enviarTraza(paso) {
+  if (++PASOS > 120) return;
   fetchOriginal(`/api/orders/${encodeURIComponent(ORDEN)}/traza`, { method: 'POST', keepalive: true,
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paso }) }).catch(() => {});
+}
+function soltarRepetidas() {
+  if (REPE.n) enviarTraza(`↻ ${REPE.clave} ×${REPE.n}${REPE.max ? ` (hasta ${REPE.max}ms)` : ''}`);
+  REPE.n = 0; REPE.max = 0;
+}
+function traza(paso, clave = paso, ms = 0) {
+  if (!ORDEN) return;
+  if (clave === REPE.clave) { REPE.n++; REPE.max = Math.max(REPE.max, ms); if (REPE.n >= 12) soltarRepetidas(); return; }
+  soltarRepetidas();
+  REPE.clave = clave;
+  enviarTraza(paso);
 }
 // El SDK de Chytapay corre en esta página: sus pedidos a la API quedan anotados con el estado y la demora.
 window.fetch = async (url, op) => {
   const u = String(url?.url || url);
   if (!ORDEN || !/chytapay\.com\.ar\/v1\//.test(u) || /widget-events/.test(u)) return fetchOriginal(url, op);
-  const ruta = `${op?.method || 'GET'} ${u.replace(/^https:\/\/[^/]+/, '').replace(/\?.*/, '').replace(/[0-9a-f]{8}-[0-9a-f-]{27}/gi, ':id')}`;
-  const t0 = performance.now(), ms = () => Math.round(performance.now() - t0) + 'ms';
-  try { const r = await fetchOriginal(url, op); traza(`${ruta} → ${r.status} ${ms()}`); return r; }
-  catch (e) { traza(`${ruta} → FALLÓ (${e?.name || 'error'}) ${ms()}`); throw e; }
+  const metodo = String(op?.method || 'GET').toUpperCase();
+  const ruta = `${metodo} ${u.replace(/^https:\/\/[^/]+/, '').replace(/\?.*/, '').replace(/[0-9a-f]{8}-[0-9a-f-]{27,28}/gi, ':id')}`;
+  const t0 = performance.now(), ms = () => Math.round(performance.now() - t0);
+  try {
+    const r = await fetchOriginal(url, op), t = ms();
+    traza(`${ruta} → ${r.status} ${t}ms`, `${ruta} → ${r.status}`, t);
+    if (metodo === 'POST' && /\/payer$/.test(ruta) && r.ok) CVU_DADO = true;
+    return r;
+  } catch (e) { traza(`${ruta} → FALLÓ (${e?.name || 'error'}) ${ms()}ms`); throw e; }
 };
 // Lo que la pantalla de Chytapay le avisa a esta página (lista, DNI ingresado, abrir Mercado Pago…).
 window.addEventListener('message', ev => {
@@ -257,6 +278,21 @@ window.addEventListener('message', ev => {
   if (tipo === 'ready') LISTA = true;
   if (tipo && tipo !== 'height') traza('pantalla: ' + tipo.slice(0, 40));
 });
+// Si se va a otra app (la del banco, para transferir) y cuándo vuelve.
+document.addEventListener('visibilitychange', () => traza(document.hidden ? 'salió de la página' : 'volvió a la página'));
+
+// Al que ya tiene el CVU y cierra la pantalla (o se le vence esperando): que no transfiera dos veces.
+function avisoTransferencia() {
+  if (!CVU_DADO) return false;
+  const wa = CFG?.sitio?.ayudaWhatsapp;
+  const texto = `Hola, transferí para las entradas de ${CFG?.sitio?.nombre || 'la gala'} a nombre de ${$('#nombre').value.trim()} y todavía no me llegaron.`;
+  $('#ya-transferi').innerHTML = `<b>¿Ya hiciste la transferencia?</b> No la hagas de nuevo. A veces el banco tarda en acreditarla:
+    apenas llegue, las entradas te llegan solas a <b>${esc($('#email').value.trim())}</b> (mirá también en spam).
+    Si todavía no transferiste, tocá «Ir a pagar» de nuevo.${wa ? ` Si en una hora no te llegaron,
+    <a href="https://wa.me/${encodeURIComponent(wa)}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener">escribinos por WhatsApp</a>.` : ''}`;
+  $('#ya-transferi').hidden = false;
+  return true;
+}
 
 async function abrirPago(d) {
   if (d.pago.pk === 'simulado') {
@@ -283,15 +319,19 @@ async function abrirPago(d) {
     paymentId: d.pago.paymentId,
     // onSuccess es solo para la pantalla: la entrada la emite el aviso firmado que le llega al servidor.
     onSuccess: () => { clearTimeout(vigia); traza('pagó'); exito(d.orderId); },
-    onError: e => { clearTimeout(vigia); traza('error: ' + String(e?.message || e).slice(0, 80)); error('El pago venció o no se pudo completar. Si ya transferiste, no transfieras de nuevo: revisá tu correo o Mis entradas.'); reactivar(); refrescar(); },
-    onCancel: () => { clearTimeout(vigia); traza('cerró la pantalla'); reactivar(); },
+    onError: e => {
+      clearTimeout(vigia); traza('error: ' + String(e?.message || e).slice(0, 80));
+      error(avisoTransferencia() ? 'El tiempo para pagar se venció.' : 'El pago venció o no se pudo completar. Si ya transferiste, no transfieras de nuevo: revisá tu correo o Mis entradas.');
+      reactivar(); refrescar();
+    },
+    onCancel: () => { clearTimeout(vigia); traza('cerró la pantalla'); avisoTransferencia(); reactivar(); },
     onWalletOpen: w => traza(`Mercado Pago: ${w?.opened === false ? 'no abrió' : 'abrió'} (${[w?.browser, w?.os].filter(Boolean).join(', ')})`),
     theme: { '--chytapay-primary': getComputedStyle(document.documentElement).getPropertyValue('--oro').trim() || '#e7c27d' },
   });
 }
 
 $('#compra').addEventListener('submit', async ev => {
-  ev.preventDefault(); error('');
+  ev.preventDefault(); error(''); $('#ya-transferi').hidden = true;
   if (!EV) return error('Elegí la fecha.');
   const datos = { evento: EV.id, tipo, cantidad: cant, nombre: $('#nombre').value.trim(), email: $('#email').value.trim(), dni: $('#dni').value.trim() };
   if (!tipo) return error('Elegí el tipo de entrada.');
@@ -304,7 +344,8 @@ $('#compra').addEventListener('submit', async ev => {
     const r = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'No se pudo iniciar la compra.');
-    ORDEN = d.orderId; PASOS = 0;
+    if (d.orderId !== ORDEN) CVU_DADO = false;   // si retoma la misma compra, el CVU es el mismo
+    soltarRepetidas(); ORDEN = d.orderId; PASOS = 0; REPE.clave = '';
     traza(d.retomada ? `compra retomada (quedan ${d.pago.minutos} min)` : 'compra creada');
     b.textContent = 'Abriendo el pago…';
     await abrirPago(d);

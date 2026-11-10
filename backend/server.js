@@ -75,7 +75,9 @@ function numEnv(clave, porDefecto) {
 const CARGO_PCT = numEnv('CARGO_PCT', 10)              // costo de servicio online (lo paga el comprador, va adentro del precio)
 const CARGO_PUNTO_PCT = numEnv('CARGO_PUNTO_PCT', 10)  // en los puntos de venta: mismo precio final que online
 const MAX_ENTRADAS = numEnv('MAX_ENTRADAS', 10)
-const RESERVA_MINUTOS = Math.min(60, Math.max(10, numEnv('RESERVA_MINUTOS', 30)))  // también es el vencimiento del cobro en Chytapay (3 a 60)
+// También es el vencimiento del cobro en Chytapay, que acepta de 3 a 60 minutos. Va el máximo: hay bancos que
+// demoran la transferencia (en El Quinto Elemento una llegó a los 34 minutos y, con 30, quedó sin asignar).
+const RESERVA_MINUTOS = Math.min(60, Math.max(10, numEnv('RESERVA_MINUTOS', 60)))
 const POCAS = numEnv('AVISO_POCAS', 30)                // desde cuántas libres se avisa "quedan pocas" (el cupo nunca se muestra)
 const SIN_TOPE = 100000                                 // un cupo así de grande = "sin tope": el panel no muestra barra ni libres
 const VENTA_ABIERTA = String(process.env.VENTA_ABIERTA || 'true') !== 'false'   // llave general de la venta online
@@ -407,12 +409,12 @@ async function enviarMailPendiente(orden) {
   const ayuda = SITIO.ayudaWhatsapp ? `
         <div style="background:#f4f1f8;border-radius:12px;padding:16px;text-align:center;margin-top:18px;">
           <p style="margin:0 0 10px;font-size:14px;">¿Preferís que te demos una mano?</p>
-          <a href="https://wa.me/${SITIO.ayudaWhatsapp}?text=${encodeURIComponent(`Hola, quise comprar entradas para ${ev?.nombre || SITIO.nombre} y no pude completar el pago.`)}"
+          <a href="https://wa.me/${SITIO.ayudaWhatsapp}?text=${encodeURIComponent(`Hola, empecé a comprar entradas para ${ev?.nombre || SITIO.nombre} a nombre de ${orden.nombre} y quiero consultar por el pago.`)}"
              style="background:#25D366;color:#fff;text-decoration:none;font-weight:700;padding:11px 26px;border-radius:24px;display:inline-block;font-size:14px;">Escribinos por WhatsApp</a>
         </div>` : ''
   await t.sendMail({
     from: remitente(), to: orden.email,
-    subject: `¿Tuviste problemas para pagar tus entradas de ${ev?.nombre || SITIO.nombre}?`,
+    subject: `Tus entradas para ${ev?.nombre || SITIO.nombre}: todavía no nos llegó el pago`,
     attachments: adjuntoLogo(),
     html: `
   <div style="background:#f1eef5;padding:22px 12px;font-family:Arial,sans-serif;color:#1d1830;">
@@ -420,12 +422,15 @@ async function enviarMailPendiente(orden) {
       ${encabezadoMail(ev)}
       <tr><td style="padding:26px;">
         <p style="font-size:16px;margin:0 0 12px;">Hola ${primerNombre(orden.nombre)}:</p>
-        <p style="font-size:15px;line-height:1.6;margin:0 0 12px;">Empezaste a comprar <b>${cuantasEntradas(orden)}</b> y el pago quedó sin completar. <b>No se te cobró nada.</b></p>
-        <p style="font-size:15px;line-height:1.6;margin:0;">Se paga por transferencia, desde la app de tu banco o de tu billetera. Importante: <b>transferí desde una cuenta a tu nombre</b>, con el DNI que pusiste en la compra.</p>
+        <p style="font-size:15px;line-height:1.6;margin:0 0 14px;">Empezaste a comprar <b>${cuantasEntradas(orden)}</b> y todavía no nos llegó la transferencia.</p>
+        <div style="background:#f4f1f8;border-radius:12px;padding:14px 16px;margin:0 0 14px;">
+          <p style="font-size:15px;line-height:1.6;margin:0;"><b>¿Ya transferiste?</b> No lo hagas de nuevo. A veces el banco demora la transferencia: apenas se acredite, te mandamos las entradas a este correo. Si pasa más de una hora y no te llegaron, escribinos y lo ubicamos.</p>
+        </div>
+        <p style="font-size:15px;line-height:1.6;margin:0;"><b>¿No llegaste a pagar?</b> Podés retomar la compra. Se paga por transferencia desde la app de tu banco o de tu billetera: <b>transferí desde una cuenta a tu nombre</b>, con el DNI que pusiste en la compra.</p>
         <div style="text-align:center;margin:24px 0 4px;">
           <a href="${FRONTEND_URL}/comprar?evento=${encodeURIComponent(orden.evento)}" style="${botonMail}font-weight:800;padding:14px 32px;border-radius:30px;display:inline-block;">Retomar mi compra</a>
         </div>${ayuda}
-        <p style="font-size:12px;color:#7d7590;margin:22px 0 0;text-align:center;">Si ya compraste, ignorá este mensaje.</p>
+        <p style="font-size:12px;color:#7d7590;margin:22px 0 0;text-align:center;">Si ya te llegaron las entradas, ignorá este mensaje.</p>
       </td></tr>
     </table>
   </div>`,
@@ -634,6 +639,28 @@ async function verificarYEmitir(orden) {
   return true
 }
 
+// Transferencia que llegó después de vencer el cobro (el banco la demoró): Chytapay no la asigna y avisa
+// "sin asignar". Se emite sola si es inequívoca: es de una compra nuestra sin pagar, por el total, desde una
+// cuenta con el mismo DNI de la compra (el CUIL lo lleva adentro) y todavía hay lugar. Si no, la decide la
+// academia. Igual conviene que la asigne en Chytapay (así se registra y se distribuye la comisión): ese aviso
+// no emite dos veces porque la compra ya está pagada, y marca la fila como resuelta.
+async function emitirTardia(d, fila) {
+  const ref = String(d.paymentRequest?.referenceId || '')
+  if (d.reason !== 'expired' || !ref) return false
+  const orden = await Orden.findByPk(ref)
+  if (!orden || orden.metodo !== 'chytapay' || !['pendiente', 'abandonada'].includes(orden.estado)) return false
+  const dni = String(orden.dni || '').replace(/\D/g, '').padStart(8, '0')
+  const cuil = String(d.payerCuil ?? '').replace(/\D/g, '')
+  if (cuil.length !== 11 || cuil.slice(2, 10) !== dni) return false
+  if (!(Number(d.amount) + 1 >= Number(orden.total))) return false
+  const oc = await ocupacion(orden.evento)
+  if ((oc[orden.tipo]?.libres ?? 0) < orden.cantidad) return false
+  if (!await confirmarYEmitir(orden, { pagador: d.payerName })) return false
+  await fila?.update({ emitida: true }).catch(() => {})
+  console.log(`✅ Orden ${orden.id}: la transferencia llegó tarde pero es del mismo DNI y por el total → emitida sola`)
+  return true
+}
+
 const _avisosVistos = new Set()   // X-Chytapay-Webhook-Id ya procesados (los reintentos traen el mismo)
 const limiteAvisos = rateLimit({ windowMs: 60000, max: 600 })
 app.post('/api/webhooks/chytapay', limiteAvisos, async (req, res) => {
@@ -655,6 +682,8 @@ app.post('/api/webhooks/chytapay', limiteAvisos, async (req, res) => {
       if (d.stateType !== 'total_payment') return console.log(`ℹ️ Orden ${orden.id}: pago parcial ${d.paidAmount} de ${orden.total}`)
       if (Number(d.paidAmount) + 1 < orden.total) return console.log(`⚠️ Orden ${orden.id}: dice pagada pero pagó ${d.paidAmount} de ${orden.total}`)
       await confirmarYEmitir(orden, { pagador: d.reconciledPayerName })
+      // Si era una transferencia tardía que la academia acaba de asignar en Chytapay, ya no queda pendiente.
+      await SinImputar.update({ resuelto: true }, { where: { orden_id: orden.id, motivo: 'expired', resuelto: false } })
     } else if (d.event === 'payment_request.expired') {
       const [n] = await Orden.update({ estado: 'abandonada' }, { where: { id: String(d.referenceId || ''), estado: 'pendiente' } })
       if (n) console.log(`⌛ Orden ${d.referenceId}: venció sin pagar`)
@@ -663,10 +692,11 @@ app.post('/api/webhooks/chytapay', limiteAvisos, async (req, res) => {
       // persona, pagó tarde o pagó dos veces). Se registra para que la asigne a mano.
       // Con sedes, cada gala recibe solo los de su academia: si llega uno de otra sede, no es nuestro.
       if (d.tenantKey && sedeConfigurada() && d.tenantKey !== sedeConfigurada()) return console.log(`ℹ️ Pago sin imputar de otra sede (${d.tenantKey}): ignorado`)
-      await SinImputar.create({ avisoId: avisoId || null, motivo: d.reason, monto: d.amount, pagador: d.payerName,
+      const fila = await SinImputar.create({ avisoId: avisoId || null, motivo: d.reason, monto: d.amount, pagador: d.payerName,
         pagadorCuil: d.payerCuil != null ? String(d.payerCuil) : null, orden_id: d.paymentRequest?.referenceId || null,
         fecha: d.operationDate ? new Date(d.operationDate) : new Date() }).catch(e => { if (!/unique/i.test(e?.name || '')) throw e })
       console.log(`⚠️ Pago SIN IMPUTAR: ${pesos(d.amount)} de ${d.payerName || 'desconocido'} (${d.reason})`)
+      await emitirTardia(d, fila)
     } else if (d.event === 'refund.succeeded') {
       const ref = d.paymentRequest?.referenceId || d.referenceId
       const [n] = ref ? await Orden.update({ estado: 'reversada' }, { where: { id: ref, estado: 'pagada' } }) : [0]
@@ -717,14 +747,14 @@ app.post('/api/orders/:id/confirmar', rateLimit({ windowMs: 60000, max: 120 }), 
 })
 
 // Traza de la pantalla de pago (la manda comprar.html): un paso por llamada, con la hora argentina.
-// La primera línea lleva el navegador. Solo compras online de las últimas 2 horas y hasta ~6.000 letras.
+// La primera línea lleva el navegador. Solo compras online de las últimas 2 horas y hasta ~12.000 letras.
 app.post('/api/orders/:id/traza', rateLimit({ windowMs: 60000, max: 60 }), async (req, res) => {
   res.sendStatus(204)
   try {
     const paso = String(req.body?.paso || '').replace(/[\u0000-\u001f|]/g, ' ').trim().slice(0, 200)
     const orden = paso && await Orden.findByPk(String(req.params.id).slice(0, 60), { attributes: ['id', 'metodo', 'createdAt', 'traza'] })
     if (!orden || orden.metodo !== 'chytapay' || Date.now() - new Date(orden.createdAt).getTime() > 2 * 3600e3) return
-    if ((orden.traza || '').length > 6000) return
+    if ((orden.traza || '').length > 12000) return
     const linea = `${new Date(Date.now() - 3 * 3600e3).toISOString().slice(11, 19)} ${paso}`
     const ua = String(req.headers['user-agent'] || '?').replace(/[\u0000-\u001f|]/g, ' ').slice(0, 250)
     // Se arma en la base: los pasos llegan casi juntos y ninguno pisa al otro (ni se repite el navegador).
@@ -1074,7 +1104,8 @@ app.post('/api/admin/eventos/:id/imagen', requireAuth(ORGANIZACION), async (req,
 app.get('/api/admin/sin-imputar', requireAuth(ORGANIZACION), async (_req, res) => {
   try {
     const filas = await SinImputar.findAll({ order: [['createdAt', 'DESC']], limit: 100, raw: true })
-    res.json({ pagos: filas.map(f => ({ id: f.id, motivo: f.motivo, monto: Number(f.monto), pagador: f.pagador, orden: f.orden_id, fecha: f.fecha, resuelto: Boolean(Number(f.resuelto)) })) })
+    res.json({ pagos: filas.map(f => ({ id: f.id, motivo: f.motivo, monto: Number(f.monto), pagador: f.pagador, orden: f.orden_id, fecha: f.fecha,
+      resuelto: Boolean(Number(f.resuelto)), emitida: Boolean(Number(f.emitida)) })) })
   } catch (e) {
     console.error('❌ Error en sin-imputar:', e?.message || e)
     res.status(500).json({ error: 'No se pudo armar la lista' })
@@ -1388,7 +1419,8 @@ async function repescarPagos() {
 // ═══════════════════════════════════════════════════════════════
 //  RECUPERO DE COMPRAS A MEDIO CAMINO: un mail, una sola vez, ofreciendo ayuda.
 // ═══════════════════════════════════════════════════════════════
-const RECUPERO_MINUTOS = numEnv('RECUPERO_MINUTOS', 45)
+// Siempre después de que vence el cobro: antes, el comprador todavía puede estar transfiriendo (0 = apagado).
+const RECUPERO_MINUTOS = numEnv('RECUPERO_MINUTOS', RESERVA_MINUTOS + 15) > 0 ? Math.max(RESERVA_MINUTOS + 5, numEnv('RECUPERO_MINUTOS', RESERVA_MINUTOS + 15)) : 0
 const RECUPERO_HORAS = numEnv('RECUPERO_HORAS', 48)
 let recuperoCorriendo = false
 async function recuperarPendientes() {
@@ -1422,7 +1454,7 @@ async function recuperarPendientes() {
 // (cuando el sistema crece y una base ya existe). Nunca borra ni cambia columnas.
 async function completarColumnas() {
   const qi = sequelize.getQueryInterface()
-  for (const modelo of [Evento, Orden, Entrada]) {
+  for (const modelo of [Evento, Orden, Entrada, SinImputar]) {
     const tabla = modelo.getTableName()
     const hay = await qi.describeTable(tabla)
     for (const [nombre, attr] of Object.entries(modelo.getAttributes())) {

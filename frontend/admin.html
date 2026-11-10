@@ -230,7 +230,8 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
       <section class="tarjeta">
         <div class="fila" style="justify-content:space-between;"><p class="paso" style="margin:0;">Transferencias sin asignar</p><button class="chico" onclick="cargarSinImputar()">Actualizar</button></div>
         <p class="ayuda">Plata que entró a la cuenta del organizador pero no se pudo asignar sola a una compra (pagó otra persona, pagó tarde o pagó dos veces).
-          Se asigna desde la cuenta de Chytapay a la compra que corresponde, y ahí se emiten las entradas solas.</p>
+          Se asigna desde la cuenta de Chytapay a la compra que corresponde, y ahí se emiten las entradas solas.
+          Si pagó tarde desde una cuenta con el mismo DNI de la compra y por el total, las entradas ya salen solas al llegar.</p>
         <div class="tabla"><table><thead><tr><th>Fecha</th><th class="n">Monto</th><th>Quién pagó</th><th>Motivo</th><th>Compra</th><th></th></tr></thead><tbody id="si-filas"></tbody></table></div>
       </section>
       <section class="tarjeta solo-admin">
@@ -689,7 +690,7 @@ async function cargarSinImputar() {
   try {
     const d = await api('/api/admin/sin-imputar');
     $('#si-filas').innerHTML = d.pagos.map(p => `<tr${p.resuelto ? ' style="opacity:.5"' : ''}><td>${fecha(p.fecha)}</td><td class="n">${pesos(p.monto)}</td><td>${esc(p.pagador || '—')}</td>
-      <td>${esc(MOTIVO[p.motivo] || p.motivo)}</td><td>${p.orden ? esc(p.orden.slice(-8)) : '—'}</td>
+      <td>${esc(MOTIVO[p.motivo] || p.motivo)}${p.emitida && !p.resuelto ? '<br><small>Las entradas ya salieron solas (mismo DNI y monto). Asignala en Chytapay para que se registre: no se emite dos veces.</small>' : ''}</td><td>${p.orden ? esc(p.orden.slice(-8)) : '—'}</td>
       <td>${p.resuelto ? 'resuelto' : ES_ADMIN() ? `<button class="chico" onclick="resolver(${p.id})">Marcar resuelto</button>` : ''}</td></tr>`).join('')
       || '<tr><td colspan="6" class="ayuda">No hay transferencias sin asignar.</td></tr>';
   } catch (x) { /* sin permiso o sin datos */ }

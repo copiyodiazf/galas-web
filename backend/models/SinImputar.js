@@ -14,6 +14,7 @@ const SinImputar = sequelize.define('SinImputar', {
   orden_id:    { type: DataTypes.STRING, allowNull: true },    // si Chytapay pudo atribuirlo a un cobro
   fecha:       { type: DataTypes.DATE, allowNull: true },
   resuelto:    { type: DataTypes.BOOLEAN, defaultValue: false },
+  emitida:     { type: DataTypes.BOOLEAN, defaultValue: false },  // llegó tarde pero era inequívoca: las entradas ya salieron
 }, {
   tableName: 'sin_imputar',
   timestamps: true,
