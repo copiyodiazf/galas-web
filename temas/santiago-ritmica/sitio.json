@@ -1,0 +1,210 @@
+{
+  "nombre": "Gala 2026 · Santiago Rítmica",
+  "lema": "Domingo 13 de diciembre",
+  "organiza": "Santiago Rítmica",
+  "lugar": "Paraninfo de la UNSE",
+  "direccion": "Av. Belgrano (S) 1912",
+  "ciudad": "Santiago del Estero",
+  "instagram": "santiago.ritmica",
+  "ayudaWhatsapp": "5493854414082",
+  "menores": "",
+  "modo": "cartelera",
+  "precioIncluyeCargo": false,
+  "desgloseServicio": true,
+  "mail": {
+    "encabezado": "#120b14",
+    "sobrecabeza": "#e7c47f",
+    "acento": "#e7c47f",
+    "acentoTexto": "#241606",
+    "titulos": "#8a6420",
+    "franja": [
+      "#f4a3cc",
+      "#e5e8ef",
+      "#e7c47f",
+      "#ee5a2b"
+    ]
+  },
+  "festejo": {
+    "divas-del-pop": [
+      "#f4a3cc",
+      "#e5e8ef",
+      "#e7c47f",
+      "#d9568f"
+    ],
+    "*": [
+      "#e7c47f",
+      "#fff1d2",
+      "#ffffff",
+      "#ee5a2b"
+    ]
+  },
+  "sala": {
+    "nombre": "Paraninfo de la UNSE",
+    "escenario": "Escenario",
+    "asiento1": "derecha",
+    "nota": "Los números de cada fila empiezan del lado derecho, mirando hacia el escenario.",
+    "filas": [
+      {
+        "fila": "1",
+        "asientos": 22
+      },
+      {
+        "fila": "2",
+        "asientos": 21
+      },
+      {
+        "fila": "3",
+        "asientos": 26
+      },
+      {
+        "fila": "4",
+        "asientos": 26
+      },
+      {
+        "fila": "5",
+        "asientos": 26
+      },
+      {
+        "fila": "6",
+        "asientos": 26
+      },
+      {
+        "fila": "7",
+        "asientos": 26
+      },
+      {
+        "fila": "8",
+        "asientos": 26
+      },
+      {
+        "fila": "9",
+        "asientos": 26
+      },
+      {
+        "fila": "10",
+        "asientos": 26
+      },
+      {
+        "fila": "11",
+        "asientos": 26
+      },
+      {
+        "fila": "12",
+        "asientos": 26
+      },
+      {
+        "fila": "13",
+        "bloques": [
+          9,
+          {
+            "hueco": "Cabina",
+            "ancho": 8
+          },
+          9
+        ]
+      },
+      {
+        "fila": "14",
+        "zona": "Zona verde",
+        "tipo": "zona-verde",
+        "bloques": [
+          8,
+          {
+            "hueco": "",
+            "ancho": 10
+          },
+          8
+        ]
+      }
+    ]
+  },
+  "eventos": [
+    {
+      "id": "divas-del-pop",
+      "nombre": "Divas del Pop · Gala de las más pequeñas",
+      "subtitulo": "Santiago Rítmica · Gala 2026",
+      "fecha": "2026-12-13",
+      "hora": "16:00",
+      "puertas": "",
+      "imagen": "/assets/flyer-divas-del-pop.webp",
+      "publicado": false,
+      "artistas": [],
+      "tipos": [
+        {
+          "id": "platea",
+          "nombre": "Platea",
+          "corto": "Platea",
+          "detalle": "Filas 1 a 13 · butaca numerada",
+          "precio": 20000,
+          "cupo": 321
+        },
+        {
+          "id": "zona-verde",
+          "nombre": "Zona verde",
+          "corto": "Zona verde",
+          "detalle": "Fila 14, al fondo, detrás de la cabina",
+          "precio": 10000,
+          "cupo": 16
+        }
+      ]
+    },
+    {
+      "id": "el-origen-de-ser-18",
+      "nombre": "El Origen de Ser · 1.ª función",
+      "subtitulo": "Entre ángeles y demonios · Santiago Rítmica · Gala 2026",
+      "fecha": "2026-12-13",
+      "hora": "18:00",
+      "puertas": "",
+      "imagen": "/assets/flyer-el-origen-de-ser.webp",
+      "publicado": false,
+      "artistas": [],
+      "tipos": [
+        {
+          "id": "platea",
+          "nombre": "Platea",
+          "corto": "Platea",
+          "detalle": "Filas 1 a 13 · butaca numerada",
+          "precio": 20000,
+          "cupo": 321
+        },
+        {
+          "id": "zona-verde",
+          "nombre": "Zona verde",
+          "corto": "Zona verde",
+          "detalle": "Fila 14, al fondo, detrás de la cabina",
+          "precio": 10000,
+          "cupo": 16
+        }
+      ]
+    },
+    {
+      "id": "el-origen-de-ser-21",
+      "nombre": "El Origen de Ser · 2.ª función",
+      "subtitulo": "Entre ángeles y demonios · Santiago Rítmica · Gala 2026",
+      "fecha": "2026-12-13",
+      "hora": "21:00",
+      "puertas": "",
+      "imagen": "/assets/flyer-el-origen-de-ser.webp",
+      "publicado": false,
+      "artistas": [],
+      "tipos": [
+        {
+          "id": "platea",
+          "nombre": "Platea",
+          "corto": "Platea",
+          "detalle": "Filas 1 a 13 · butaca numerada",
+          "precio": 20000,
+          "cupo": 321
+        },
+        {
+          "id": "zona-verde",
+          "nombre": "Zona verde",
+          "corto": "Zona verde",
+          "detalle": "Fila 14, al fondo, detrás de la cabina",
+          "precio": 10000,
+          "cupo": 16
+        }
+      ]
+    }
+  ]
+}

@@ -16,6 +16,8 @@ const Orden = sequelize.define('Orden', {
   vendedor:  { type: DataTypes.STRING, allowNull: true },    // usuario del punto de venta
   cobro:     { type: DataTypes.STRING, allowNull: true },    // en el punto: efectivo o transferencia
   cantidad:  { type: DataTypes.INTEGER, allowNull: false },
+  // Gala con butacas numeradas: las de esta compra, separadas por coma ("5-11,5-12"). Una por entrada.
+  butacas:   { type: DataTypes.TEXT, allowNull: true },
   subtotal:  { type: DataTypes.INTEGER, allowNull: false },  // entradas por su valor (lo de la academia)
   cargo:     { type: DataTypes.INTEGER, allowNull: false },  // costo de servicio
   total:     { type: DataTypes.INTEGER, allowNull: false },

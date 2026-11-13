@@ -1,0 +1,38 @@
+/* Plano de butacas (compra y panel). El escenario arriba; cada butaca es un botón con su número.
+   --b es el tamaño de la butaca: lo cambian los botones de zoom. */
+.plano-caja{margin:12px -20px 0;}
+.plano-zoom{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:0 20px 8px;font-size:12px;color:var(--gris);}
+.plano-zoom span{margin-right:auto;}
+.plano-zoom button{width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:var(--crema);font:800 20px var(--f-texto);cursor:pointer;}
+.plano{--b:26px;--g:4px;overflow:auto;-webkit-overflow-scrolling:touch;max-height:70vh;padding:4px 0 14px;overscroll-behavior:contain;
+  border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.18);}
+.plano-sala{display:flex;flex-direction:column;align-items:center;gap:var(--g);width:max-content;min-width:100%;padding:0 6px;}
+.plano-escenario{width:min(70%,560px);margin:10px 0 18px;padding:9px 0;text-align:center;font-weight:800;font-size:12px;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--noche);background:var(--oro-degrade, var(--oro));border-radius:6px 6px 40% 40% / 6px 6px 22px 22px;}
+.pf{display:flex;align-items:center;gap:var(--g);}
+/* El número de fila queda fijo a los costados al deslizar: opaco, para que no se mezcle con la butaca de abajo. */
+.pf-n{position:sticky;z-index:2;flex:none;width:calc(var(--b) + 6px);height:var(--b);display:grid;place-items:center;font-weight:800;font-size:11px;color:var(--crema);
+  background:var(--noche-2);border-radius:6px;box-shadow:0 0 0 var(--g) var(--noche-2);}
+.pf-n.izq{left:2px;} .pf-n.der{right:2px;}
+.pf-asientos{display:flex;gap:var(--g);}
+.pf-zona{font-weight:800;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#7be3a6;margin-top:8px;}
+.bu{width:var(--b);height:var(--b);flex:none;border-radius:7px 7px 4px 4px;border:1.5px solid rgba(255,255,255,.5);background:transparent;color:var(--crema);
+  font:700 calc(var(--b) * .42) var(--f-texto);line-height:1;padding:0;cursor:pointer;display:grid;place-items:center;transition:background .15s,transform .1s;}
+.bu:active{transform:scale(.92);}
+.pf.zona .bu.libre{border-color:#5fd38d;color:#c9f5da;}
+.bu.elegida{background:var(--oro);border-color:var(--oro);color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.65);}
+.bu.ocupada{background:rgba(255,255,255,.12);border-color:transparent;color:transparent;cursor:not-allowed;}
+/* En el panel */
+.bu.vendida{background:#3f9466;border-color:#3f9466;color:#fff;}
+.bu.pagando{background:#d4a03c;border-color:#d4a03c;color:#1d1830;}
+.bu.cortesia{background:#7c6cf0;border-color:#7c6cf0;color:#fff;}
+.bu.bloqueada{background:repeating-linear-gradient(45deg,#4b4060,#4b4060 4px,#5e5278 4px,#5e5278 8px);border-color:#8d80aa;color:#fff;}
+.bu.marcada{outline:3px solid #fff;outline-offset:1px;}
+.bu.entro{box-shadow:inset 0 -4px 0 rgba(0,0,0,.45);}
+.hueco{flex:none;display:grid;place-items:center;font-weight:800;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);
+  height:var(--b);border-radius:6px;}
+.hueco.cabina{background:rgba(255,255,255,.07);border:1px dashed rgba(255,255,255,.3);}
+.plano-leyenda{display:flex;flex-wrap:wrap;gap:8px 14px;padding:10px 20px 0;font-size:12px;color:var(--gris);}
+.plano-leyenda span{display:inline-flex;align-items:center;gap:6px;}
+.plano-leyenda .bu{--b:16px;cursor:default;pointer-events:none;}
+.plano-nota{padding:6px 20px 0;font-size:12px;color:var(--gris);}

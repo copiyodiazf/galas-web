@@ -38,6 +38,7 @@ input:focus,select:focus{border-color:var(--oro);}
 .error{display:none;margin-top:12px;background:rgba(217,83,79,.14);border:1px solid rgba(217,83,79,.5);color:#ffd5d2;border-radius:12px;padding:11px 14px;font-size:14px;}
 .aviso{background:rgba(231,194,125,.09);border:1px solid rgba(231,194,125,.3);border-radius:14px;padding:13px 15px;font-size:14px;color:var(--crema);}
 .qrs{display:grid;gap:14px;margin-top:16px;}
+.qr .butaca{display:block;margin-top:6px;font-weight:800;font-size:19px;color:#1d1830;}   /* galas con butacas numeradas */
 .qr{background:#fff;color:#1d1830;border-radius:16px;padding:14px;text-align:center;}
 .qr img{width:100%;max-width:250px;display:block;margin:6px auto 0;}
 .qr b{font-family:var(--f-display);font-weight:700;font-size:18px;}

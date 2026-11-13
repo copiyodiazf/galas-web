@@ -1,0 +1,3 @@
+Cormorant Garamond (Christian Thalmann) y Jost (indestructible type*): SIL Open Font License 1.1.
+Bajadas de Google Fonts el 13/11/2026, solo el bloque "latin" (alcanza para el castellano).
+https://openfontlicense.org

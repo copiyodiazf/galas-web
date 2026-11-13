@@ -47,7 +47,7 @@ $('#buscar').addEventListener('submit', async ev => {
       $('#resultado').innerHTML = d.ordenes.map(o => `<section class="tarjeta">
         <p class="paso">${esc(o.eventoNombre)} · ${esc(o.cuando)}</p><p class="ayuda" style="margin:-6px 0 10px;">${esc(o.tipoNombre)} · ${o.cantidad}</p>
         <div class="aviso">Hacé una captura de cada QR: en el lugar puede no haber señal. Cada QR vale solo para esa fecha.</div>
-        <div class="qrs">${o.qrs.map(q => `<div class="qr"><b>${esc(o.tipoNombre)}</b><small>${q.indice} de ${o.cantidad}</small>
+        <div class="qrs">${o.qrs.map(q => `<div class="qr"><b>${esc(o.tipoNombre)}</b><small>${q.indice} de ${o.cantidad}</small>${q.butaca ? `<span class="butaca">${esc(q.butaca)}</span>` : ''}
           <img src="${esc(q.url)}" width="250" height="250" alt="Código QR ${q.indice}">
           ${q.usado ? '<span class="usada">Ya ingresó</span>' : ''}</div>`).join('')}</div>
       </section>`).join('');

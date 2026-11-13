@@ -8,6 +8,7 @@ const Entrada = sequelize.define('Entrada', {
   evento:   { type: DataTypes.STRING(60), allowNull: false },
   indice:   { type: DataTypes.INTEGER, allowNull: false },   // 1..cantidad
   tipo:     { type: DataTypes.STRING(40), allowNull: false },
+  butaca:   { type: DataTypes.STRING(20), allowNull: true },    // "5-12" (fila-asiento), en las galas con sala
   codigo:   { type: DataTypes.STRING, allowNull: false },    // contenido firmado del QR (base::firma)
   base:     { type: DataTypes.STRING, allowNull: false },    // "ordenId::indice"
   usado:    { type: DataTypes.BOOLEAN, defaultValue: false },

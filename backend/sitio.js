@@ -95,6 +95,58 @@ function galeriaDe(g) {
     pasarela: g.pasarela === true, tituloVideos: limpio(g.tituloVideos, 80) } : null
 }
 
+// Confeti de la compra confirmada (Rítmica, 13/11/2026): { "<id del evento>": ["#rrggbb", …], "*": [...] }
+// o directamente una lista de colores para todos. Sin colores válidos, no hay confeti.
+function festejoDe(f) {
+  if (!f) return null
+  const colores = x => (Array.isArray(x) ? x : []).filter(c => HEX.test(String(c))).slice(0, 8)
+  const mapa = Array.isArray(f) ? { '*': colores(f) } : Object.fromEntries(Object.entries(f).filter(([k]) => !k.startsWith('_')).map(([k, v]) => [k, colores(v)]))
+  for (const k of Object.keys(mapa)) if (!mapa[k].length) delete mapa[k]
+  return Object.keys(mapa).length ? mapa : null
+}
+
+// Sala con butacas numeradas (opcional: sin "sala", la venta es por cantidad, como siempre).
+// Cada fila: { "fila": "1", "asientos": 22 } o, si tiene huecos (una cabina, un pasillo),
+// { "fila": "13", "bloques": [9, { "hueco": "Cabina", "ancho": 8 }, 9] }. Los bloques van desde el lado del
+// asiento 1 y los números corren de corrido por toda la fila, saltando los huecos.
+// "asiento1": de qué lado del plano (con el escenario arriba) está el asiento 1 de cada fila.
+// "tipo" de una fila: el id del tipo de entrada de esas butacas, si la sala tiene zonas con precio distinto;
+// sin tipo (o si el evento no tiene ese tipo), la butaca es del primer tipo del evento.
+// El id de cada butaca es "fila-número" ("13-10"): va en la compra, en la entrada y en el mail.
+function salaDe(s) {
+  if (!s || !Array.isArray(s.filas) || !s.filas.length) return null
+  const filas = [], vistas = new Set()
+  for (const f of s.filas.slice(0, 80)) {
+    const fila = limpio(f.fila, 6)
+    if (!/^[A-Za-z0-9]{1,6}$/.test(fila)) throw new Error(`sitio.json, sala: la fila "${f.fila}" tiene que ser un número o letras`)
+    if (vistas.has(fila)) throw new Error(`sitio.json, sala: la fila ${fila} está repetida`)
+    vistas.add(fila)
+    const crudos = Array.isArray(f.bloques) ? f.bloques : [f.asientos]
+    const bloques = []
+    let asientos = 0
+    for (const b of crudos) {
+      if (typeof b === 'number' || /^\d+$/.test(String(b ?? ''))) {
+        const n = Math.round(Number(b))
+        if (!(n > 0 && n <= 200)) throw new Error(`sitio.json, sala: la fila ${fila} tiene una cantidad de asientos inválida`)
+        bloques.push({ desde: asientos + 1, hasta: asientos + n })
+        asientos += n
+      } else if (b && typeof b === 'object') {
+        bloques.push({ hueco: true, texto: limpio(b.hueco, 40), ancho: Math.min(40, Math.max(1, Math.round(Number(b.ancho) || 1))) })
+      } else throw new Error(`sitio.json, sala: la fila ${fila} tiene un bloque que no se entiende`)
+    }
+    if (!asientos) throw new Error(`sitio.json, sala: la fila ${fila} no tiene asientos`)
+    filas.push({ fila, zona: limpio(f.zona, 24) || null, tipo: slug(f.tipo || '') || null, asientos, bloques })
+  }
+  return {
+    nombre: limpio(s.nombre, 80) || null,
+    escenario: limpio(s.escenario, 40) || 'Escenario',
+    asiento1: s.asiento1 === 'izquierda' ? 'izquierda' : 'derecha',
+    nota: limpio(s.nota, 300) || null,
+    filas,
+    total: filas.reduce((a, f) => a + f.asientos, 0),
+  }
+}
+
 export function leerSitio(archivo = process.env.SITIO_ARCHIVO || 'sitio.json') {
   const ruta = isAbsolute(archivo) ? archivo : join(aqui, archivo)
   const s = JSON.parse(readFileSync(ruta, 'utf8'))
@@ -131,6 +183,9 @@ export function leerSitio(archivo = process.env.SITIO_ARCHIVO || 'sitio.json') {
       portadaVideo: rutaArchivo(s.portadaVideo),
       // Opcional: versión vertical del video para celulares (si no está, el celular usa portadaVideo recortado).
       portadaVideoMovil: rutaArchivo(s.portadaVideoMovil),
+      sala: salaDe(s.sala),
+      // Confeti al confirmarse la compra (opcional): colores por id de evento y "*" para los demás.
+      festejo: festejoDe(s.festejo),
       feriantes: s.feriantes?.whatsapp ? { titulo: limpio(s.feriantes.titulo || 'Feriantes y emprendedores', 80), texto: limpio(s.feriantes.texto, 600),
         whatsapp: String(s.feriantes.whatsapp).replace(/\D/g, ''), mensaje: limpio(s.feriantes.mensaje, 200) } : null,
     },

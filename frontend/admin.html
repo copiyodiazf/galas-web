@@ -8,9 +8,15 @@
 <meta name="robots" content="noindex">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="sistema.css">
+<link rel="stylesheet" href="plano.css">
 <link rel="stylesheet" href="/tema.css">
 <style>
 .marco{max-width:1040px;}
+/* sala (butacas numeradas) */
+.vista .plano-caja{margin:12px 0 0;}
+.quien-butaca{margin-top:12px;background:rgba(246,240,230,.06);border:1px solid rgba(246,240,230,.15);border-radius:14px;padding:12px 14px;font-size:14px;}
+.marcadas{font-size:14px;margin:6px 0 10px;}
+.resultado .butaca-puerta{font-weight:800;font-size:26px;margin-top:10px;background:rgba(0,0,0,.22);border-radius:12px;padding:8px;}
 .barra{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
 .barra .quien{font-size:13px;color:var(--gris);}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
@@ -173,7 +179,7 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
       </div>
       <div id="zona-scan" hidden>
         <div id="reader"></div>
-        <div class="resultado" id="res"><div class="grande" id="res-tit"></div><div class="detalle" id="res-det"></div>
+        <div class="resultado" id="res"><div class="grande" id="res-tit"></div><div class="detalle" id="res-det"></div><div class="butaca-puerta" id="res-butaca" hidden></div>
           <button class="btn" onclick="siguiente()" style="margin-top:14px;background:#fff;">Escanear el siguiente</button></div>
         <div class="contador">Ingresaron <b id="ingresados">0</b> en este celular</div>
         <div class="fila" style="max-width:380px;margin:0 auto;"><input id="codigo-manual" placeholder="…o pegá el código del QR"><button class="chico oro" onclick="validarManual()">Validar</button></div>
@@ -181,13 +187,35 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
       </div>
     </div>
 
+    <!-- Sala (solo galas con butacas numeradas) -->
+    <div class="vista" id="t-sala">
+      <div class="cifras" id="s-cifras" style="margin-top:0;"></div>
+      <div id="s-plano"></div>
+      <div id="s-leyenda"></div>
+      <div class="quien-butaca" id="s-quien" hidden></div>
+      <section class="tarjeta ve-todo">
+        <p class="paso">Butacas marcadas</p>
+        <p class="marcadas" id="s-marcadas"></p>
+        <div class="fila">
+          <button class="chico" onclick="guardarButacas(true)">Guardarlas (no salen a la venta)</button>
+          <button class="chico" onclick="guardarButacas(false)">Largarlas a la venta</button>
+          <button class="chico" onclick="desmarcar()">Desmarcar</button>
+        </div>
+        <p class="ayuda" style="margin-top:12px;">Las <b>guardadas</b> no se pueden comprar online ni en la boletería: sirven para la familia de las chicas, las cámaras o los invitados. Se dan con una <b>cortesía</b>:</p>
+        <div class="fila" style="margin-top:8px;"><input id="sc-nombre" placeholder="Nombre y apellido"><input id="sc-email" placeholder="Email" type="email"></div>
+        <div class="fila"><input id="sc-dni" placeholder="DNI (opcional)" inputmode="numeric"><button class="chico oro" onclick="cortesiaSala()">Dar las marcadas como cortesía</button></div>
+        <div id="s-msg" style="margin-top:8px;"></div>
+      </section>
+    </div>
+
     <!-- Punto de venta -->
     <div class="vista" id="t-punto">
       <form class="tarjeta" id="f-punto" style="margin-top:0;">
         <p class="paso"><span>1</span>Venta en el punto</p>
         <div class="selector" id="p-tipos"></div>
+        <div id="p-sala" hidden><p class="ayuda">Tocá en el plano las butacas que se lleva.</p><div id="p-plano"></div><p class="marcadas" id="p-elegidas"></p></div>
         <div class="dos">
-          <div><label for="p-cant">Cantidad</label><input id="p-cant" type="number" min="1" max="20" value="1"></div>
+          <div id="p-caja-cant"><label for="p-cant">Cantidad</label><input id="p-cant" type="number" min="1" max="20" value="1"></div>
           <div><label for="p-cobro">Cobro</label><select id="p-cobro"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select></div>
         </div>
         <label for="p-nombre">Nombre y apellido</label><input id="p-nombre" autocomplete="off">
@@ -214,6 +242,8 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
       </section>
       <section class="tarjeta ve-todo">
         <p class="paso">Cortesía (para la fecha elegida)</p>
+        <p class="ayuda" id="c-con-sala" hidden>Con butacas numeradas, las cortesías se dan desde la pestaña <a href="#" onclick="abrir('sala');return false;">Sala</a>: marcás las butacas en el plano y ponés a quién van.</p>
+        <div id="c-sin-sala">
         <p class="ayuda">Entrada sin cargo: ocupa lugar en el cupo y le llega al mail como cualquier otra, con su QR. Figura en Operaciones como "cortesía".</p>
         <div class="selector" id="c-tipos" style="margin-top:10px;"></div>
         <div class="fila"><input id="c-nombre" placeholder="Nombre y apellido"><input id="c-email" placeholder="Email" type="email"></div>
@@ -221,6 +251,7 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
           <label class="ayuda" style="display:flex;align-items:center;gap:8px;flex:0 0 auto;margin:0;">Cantidad <input id="c-cant" type="number" min="1" max="20" value="1" style="width:80px;"></label></div>
         <p class="ayuda">Con el DNI, la persona puede recuperar su entrada en "Mis entradas" si pierde el mail.</p>
         <button class="chico oro" onclick="cortesia()" style="margin-top:10px;">Emitir cortesía</button> <span id="c-msg"></span>
+        </div>
       </section>
       <section class="tarjeta">
         <p class="paso">Planilla</p>
@@ -298,6 +329,7 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="cabeza.js"></script>
+<script src="plano.js"></script>
 <script>
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const pesos = n => '$' + Math.round(Number(n || 0)).toLocaleString('es-AR');
@@ -363,11 +395,15 @@ async function armar() {
   $$('.solo-admin').forEach(e => e.hidden = !ES_ADMIN());
   $$('.ve-todo').forEach(e => e.hidden = !VE_TODO());
   $$('.puede-reenviar').forEach(e => e.hidden = !PUEDE_REENVIAR());
-  $('#tabs').innerHTML = PESTANAS[S.rol].map(([k, t]) => `<button data-t="${k}">${t}</button>`).join('');
-  $$('#tabs button').forEach(b => b.onclick = () => abrir(b.dataset.t));
   try { await cargarCfg(); } catch (e) { alert(e.message); }
+  // Con butacas numeradas aparece la pestaña Sala (el plano), después del Resumen (o de la Puerta).
+  const pestanas = PESTANAS[S.rol].slice();
+  if (CFG?.sala && ['admin', 'organizador', 'control'].includes(S.rol)) pestanas.splice(1, 0, ['sala', 'Sala']);
+  $('#tabs').innerHTML = pestanas.map(([k, t]) => `<button data-t="${k}">${t}</button>`).join('');
+  $$('#tabs button').forEach(b => b.onclick = () => abrir(b.dataset.t));
+  $('#c-con-sala').hidden = !CFG?.sala; $('#c-sin-sala').hidden = Boolean(CFG?.sala);
   if (CFG?.modo === 'gala' && S.rol === 'organizador') $('#tabs [data-t="cartelera"]')?.remove();
-  abrir(PESTANAS[S.rol][0][0]);
+  abrir(pestanas[0][0]);
   avisoChytapay();
 }
 function abrir(t) {
@@ -382,7 +418,8 @@ function abrir(t) {
   if (t === 'ventas' && VE_TODO() && !$('#buscar').value) cargarOperaciones();
   if (t === 'cartelera') cargarCartelera();
   if (t === 'puerta') pintarPuerta();
-  if (t === 'punto') cargarMisVentas();
+  if (t === 'punto') { cargarMisVentas(); if (CFG?.sala) cargarPuntoSala(); }
+  if (t === 'sala') cargarSala();
   if (t === 'herramientas') { cargarSinImputar(); if (ES_ADMIN()) estadoChytapay(); }
 }
 
@@ -441,13 +478,14 @@ function pintarVentas(lista, titulo) {
   window._lista = lista;
   // Columnas que solo sirven con varias fechas o varios tipos de entrada; "Pagó desde" = quién transfirió (Chytapay).
   const variasFechas = (CFG?.eventos.length || 0) > 1, variosTipos = new Set(lista.map(o => o.tipoNombre)).size > 1;
+  const conButacas = lista.some(o => o.butacas);
   $('#v-cabeza').innerHTML = `<tr><th>Compra</th>${variasFechas ? '<th>Fecha</th>' : ''}${variosTipos ? '<th>Entrada</th>' : ''}<th>Nombre</th><th>DNI</th>
-    <th class="n">Cant.</th><th class="n">Total</th><th>Pagó desde</th><th>Estado</th><th>Ingresó</th></tr>`;
+    <th class="n">Cant.</th>${conButacas ? '<th>Butacas</th>' : ''}<th class="n">Total</th><th>Pagó desde</th><th>Estado</th><th>Ingresó</th></tr>`;
   $('#v-filas').innerHTML = lista.map((o, i) => {
     const e = estadoDe(o), [txt, clase] = ESTADOS[e];
     const desde = o.metodo === 'punto' ? 'punto: ' + o.vendedor : o.metodo === 'cortesia' ? '—' : (o.pagador || (e === 'pagada' ? 'transferencia' : '—'));
     return `<tr class="click" onclick="verOrden(${i})"><td>${fecha(e === 'pagada' ? o.fecha : o.creada || o.fecha)}</td>${variasFechas ? `<td>${fCorta(o.eventoFecha)}</td>` : ''}${variosTipos ? `<td>${etq(o.tipoNombre)}</td>` : ''}
-      <td>${esc(o.nombre)}</td><td>${esc(o.dni || '')}</td><td class="n">${o.cantidad}</td><td class="n">${pesos(o.total)}</td><td>${esc(desde)}</td>
+      <td>${esc(o.nombre)}</td><td>${esc(o.dni || '')}</td><td class="n">${o.cantidad}</td>${conButacas ? `<td>${esc(o.butacas || '')}</td>` : ''}<td class="n">${pesos(o.total)}</td><td>${esc(desde)}</td>
       <td><span class="etq ${clase}">${txt}</span></td><td>${['pagada', 'cortesia'].includes(e) ? `${o.ingresadas}/${o.cantidad}` : ''}</td></tr>`;
   }).join('') || '<tr><td colspan="10" class="ayuda">Sin resultados.</td></tr>';
 }
@@ -494,7 +532,7 @@ async function verOrden(i) {
     const d = await api('/api/admin/orden/' + encodeURIComponent(o.id) + '/qrs');
     $('#mq-tit').textContent = `${d.eventoNombre} · ${d.tipoNombre} · ${d.cantidad}`;
     $('#mq-sub').textContent = `${d.cuando} · ${d.nombre} · ${d.email} · DNI ${d.dni || '—'}${o.pagador ? ' · pagó: ' + o.pagador : ''}`;
-    $('#mq-qrs').innerHTML = d.qrs.map(q => `<div class="qr-mini"><img src="${esc(q.url)}" alt="">${q.indice} de ${d.cantidad}${q.usado ? ' · ya entró' : ''}</div>`).join('');
+    $('#mq-qrs').innerHTML = d.qrs.map(q => `<div class="qr-mini"><img src="${esc(q.url)}" alt="">${q.butaca ? `<b>${esc(q.butaca)}</b><br>` : ''}${q.indice} de ${d.cantidad}${q.usado ? ' · ya entró' : ''}</div>`).join('');
     $('#mq-email').value = d.email; $('#mq-msg').innerHTML = ''; $('#mq-ing-msg').innerHTML = '';
     $('#m-qr').classList.add('abierto');
   } catch (x) { alert(x.message); }
@@ -613,9 +651,17 @@ function pintarPuerta() {
   $$('#sel-puerta button').forEach(b => b.onclick = () => { PUERTA = b.dataset.p; pintarPuerta(); });
 }
 function totalPunto() {
+  const conSala = Boolean(CFG?.sala);
+  $('#p-sala').hidden = !conSala; $('#p-tipos').hidden = conSala; $('#p-caja-cant').hidden = conSala;
+  if (conSala) {
+    const ids = (evElegido()?.tipos || []).map(t => t.id);
+    if (P_ELEGIDAS.length) P_TIPO = Plano.tipoDe(CFG.sala, ids, P_ELEGIDAS[0]);
+    $('#p-elegidas').textContent = P_ELEGIDAS.length ? Plano.resumen(P_ELEGIDAS) : 'Todavía no marcaste butacas.';
+    if (!P_ELEGIDAS.length) { $('#p-total').textContent = 'Marcá las butacas en el plano.'; return; }
+  }
   const t = evElegido()?.tipos.find(x => x.id === P_TIPO);
   if (!t) { $('#p-total').textContent = 'Elegí una fecha con entradas cargadas.'; return; }
-  const c = Math.max(1, +$('#p-cant').value || 1);
+  const c = conSala ? P_ELEGIDAS.length : Math.max(1, +$('#p-cant').value || 1);
   // Precio único, igual que online: el vendedor cobra un solo número, sin servicio aparte.
   const pct = CFG.cargoPuntoPct ?? 10, unidad = t.unidadPunto ?? (t.precio + Math.round(t.precio * pct / 100));
   $('#p-total').innerHTML = `Cobrás <b style="font-size:20px">${pesos(unidad * c)}</b> · ${c} × ${esc(t.nombre)} (${pesos(unidad)}) · ${esc(evElegido().nombre)} ${fCorta(evElegido().fecha)}`;
@@ -627,15 +673,18 @@ $('#f-punto').addEventListener('submit', async ev => {
   const err = $('#p-err'); err.style.display = 'none';
   const b = ev.target.querySelector('button[type=submit]'); b.disabled = true;
   try {
+    if (CFG?.sala && !P_ELEGIDAS.length) throw new Error('Tocá en el plano las butacas que se lleva.');
     const d = await api('/api/admin/venta-punto', { method: 'POST', body: JSON.stringify({ evento: EVA, tipo: P_TIPO, cantidad: +$('#p-cant').value, cobro: $('#p-cobro').value,
-      nombre: $('#p-nombre').value, email: $('#p-email').value, dni: $('#p-dni').value }) });
+      nombre: $('#p-nombre').value, email: $('#p-email').value, dni: $('#p-dni').value, ...(CFG?.sala ? { butacas: P_ELEGIDAS } : {}) }) })
+      .catch(e => { if (CFG?.sala) cargarPuntoSala(); throw e; });
     ORDEN = { id: d.ordenId };
     $('#mq-tit').textContent = `Venta registrada · ${pesos(d.total)}`;
     $('#mq-sub').textContent = 'Las entradas también le llegaron al mail. Puede escanear estos QR ahora mismo.';
-    $('#mq-qrs').innerHTML = d.qrs.map(q => `<div class="qr-mini"><img src="${esc(q.url)}" alt="">${q.indice}</div>`).join('');
+    $('#mq-qrs').innerHTML = d.qrs.map(q => `<div class="qr-mini"><img src="${esc(q.url)}" alt="">${q.butaca ? `<b>${esc(q.butaca)}</b><br>` : ''}${q.indice}</div>`).join('');
     $('#mq-ingreso').hidden = true; $('#mq-email').value = $('#p-email').value; $('#mq-msg').innerHTML = '';
     $('#m-qr').classList.add('abierto');
-    ['#p-nombre', '#p-email', '#p-dni'].forEach(s => $(s).value = ''); $('#p-cant').value = 1; totalPunto();
+    ['#p-nombre', '#p-email', '#p-dni'].forEach(s => $(s).value = ''); $('#p-cant').value = 1; P_ELEGIDAS = [];
+    if (CFG?.sala) cargarPuntoSala(); totalPunto();
     cargarMisVentas();
   } catch (x) { err.textContent = x.message; err.style.display = 'block'; }
   b.disabled = false;
@@ -648,6 +697,105 @@ async function cargarMisVentas() {
     $('#mv-filas').innerHTML = d.ordenes.map(o => `<tr><td>${fecha(o.fecha)}</td><td>${fCorta(o.eventoFecha)}</td><td>${etq(o.tipoNombre)}</td><td>${esc(o.nombre)}</td><td class="n">${o.cantidad}</td><td>${esc(o.cobro)}</td><td class="n">${pesos(o.total)}</td></tr>`).join('')
       || '<tr><td colspan="7" class="ayuda">Todavía no vendiste.</td></tr>';
   } catch (x) { /* el admin puede no tener ventas propias */ }
+}
+
+// ── Sala (butacas numeradas): el plano con lo vendido, guardar butacas y cortesías con butaca ──
+let S_PLANO = null, S_EV = null, S_DATOS = { butacas: {} }, MARCADAS = [];
+const ESTADO_BUTACA = { vendida: 'Vendida', pagando: 'Pagándose ahora (todavía puede vencer)', cortesia: 'Cortesía', bloqueada: 'Guardada' };
+function estadoSala(id) {
+  const b = S_DATOS.butacas[id], c = [b ? b.estado : 'libre'];
+  if (MARCADAS.includes(id)) c.push('marcada');
+  if (b?.entro) c.push('entro');
+  return c;
+}
+async function cargarSala() {
+  if (!CFG?.sala || !EVA) return;
+  try {
+    S_DATOS = await api('/api/admin/sala?evento=' + encodeURIComponent(EVA));
+    if (!S_PLANO || S_EV !== EVA) {
+      S_EV = EVA; MARCADAS = []; $('#s-quien').hidden = true;
+      S_PLANO = Plano.crear($('#s-plano'), { sala: CFG.sala, estado: estadoSala, alTocar: tocarSala,
+        extra: id => { const b = S_DATOS.butacas[id]; return `${Plano.etiqueta(CFG.sala, id)}${b ? ' · ' + (ESTADO_BUTACA[b.estado] || b.estado) + (b.nombre ? ' · ' + b.nombre : '') : ' · libre'}`; } });
+      $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['cortesia', 'Cortesía'], ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
+    } else S_PLANO.refrescar();
+    const c = S_DATOS.cuentas;
+    $('#s-cifras').innerHTML = [[c.libres, 'Libres'], [c.vendida, 'Vendidas'], [c.pagando, 'Pagándose ahora'], [c.cortesia, 'Cortesías'], [c.bloqueada, 'Guardadas'], [S_DATOS.total, 'Butacas de la sala']]
+      .map(([b, s]) => `<div class="cifra"><b>${b}</b><span>${s}</span></div>`).join('');
+    pintarMarcadas();
+  } catch (x) { alert(x.message); }
+}
+function tocarSala(id) {
+  const b = S_DATOS.butacas[id];
+  if (!b || b.estado === 'bloqueada') {
+    if (!VE_TODO()) return;
+    MARCADAS = MARCADAS.includes(id) ? MARCADAS.filter(x => x !== id) : [...MARCADAS, id];
+    S_PLANO.refrescar(); pintarMarcadas();
+    return;
+  }
+  // Ocupada: de quién es (y la compra, para ver los QR o reenviarlos).
+  const q = $('#s-quien'); q.hidden = false;
+  const como = b.metodo === 'punto' ? ` · vendida en ${b.vendedor}` : b.metodo === 'cortesia' ? ` · la dio ${b.vendedor || 'la organización'}` : b.metodo === 'chytapay' ? ' · online' : '';
+  q.innerHTML = `<b>${esc(Plano.etiqueta(CFG.sala, id))}</b> · ${esc(ESTADO_BUTACA[b.estado] || b.estado)}${b.nombre ? ` · <b>${esc(b.nombre)}</b>` : ''}${esc(como)}${b.entro ? ' · <span class="ok-msg">ya entró</span>' : ''}
+    ${b.orden && b.estado !== 'pagando' && VE_TODO() ? ` <button class="chico" style="margin-left:8px" onclick="verCompraSala('${esc(b.orden)}')">Ver la compra</button>` : ''}`;
+}
+function verCompraSala(orden) {
+  const b = Object.values(S_DATOS.butacas).find(x => x.orden === orden);
+  window._lista = [{ id: orden, nombre: b?.nombre, metodo: b?.metodo, estadoVista: b?.estado === 'cortesia' ? 'cortesia' : 'pagada' }];
+  verOrden(0);
+}
+function pintarMarcadas() {
+  $('#s-marcadas').innerHTML = MARCADAS.length ? `<b>${MARCADAS.length}</b> · ${esc(Plano.resumen(MARCADAS))}` : 'Tocá butacas libres o guardadas para marcarlas. Tocando una vendida ves de quién es.';
+}
+function desmarcar() { MARCADAS = []; S_PLANO?.refrescar(); pintarMarcadas(); $('#s-msg').innerHTML = ''; }
+async function guardarButacas(bloquear) {
+  const lista = MARCADAS.filter(id => bloquear ? !S_DATOS.butacas[id] : S_DATOS.butacas[id]?.estado === 'bloqueada');
+  if (!lista.length) return $('#s-msg').innerHTML = `<span class="err-msg">${bloquear ? 'Marcá butacas libres para guardarlas.' : 'Marcá butacas guardadas para largarlas a la venta.'}</span>`;
+  try {
+    await api('/api/admin/sala/bloquear', { method: 'POST', body: JSON.stringify({ evento: EVA, butacas: lista, bloquear }) });
+    $('#s-msg').innerHTML = `<span class="ok-msg">${bloquear ? 'Guardadas' : 'De nuevo a la venta'}: ${esc(Plano.resumen(lista))}.</span>`;
+    MARCADAS = []; cargarSala();
+  } catch (x) { $('#s-msg').innerHTML = `<span class="err-msg">${esc(x.message)}</span>`; cargarSala(); }
+}
+async function cortesiaSala() {
+  const mail = $('#sc-email').value.trim();
+  if (!MARCADAS.length) return $('#s-msg').innerHTML = '<span class="err-msg">Marcá en el plano las butacas de la cortesía.</span>';
+  if (!mail) return $('#s-msg').innerHTML = '<span class="err-msg">Falta el email: ahí le llegan las entradas.</span>';
+  if (!confirm(`¿Mandar ${MARCADAS.length === 1 ? '1 entrada de cortesía' : MARCADAS.length + ' entradas de cortesía'} (${Plano.resumen(MARCADAS)}) a ${mail}?`)) return;
+  try {
+    const d = await api('/api/admin/entrada-cortesia', { method: 'POST', body: JSON.stringify({ evento: EVA, butacas: MARCADAS, nombre: $('#sc-nombre').value, email: mail, dni: $('#sc-dni').value }) });
+    $('#s-msg').innerHTML = `<span class="ok-msg">Enviada${d.cantidad > 1 ? 's' : ''} a ${esc(d.email)}: ${esc(Plano.resumen(MARCADAS))}.</span>`;
+    for (const c of ['#sc-nombre', '#sc-email', '#sc-dni']) $(c).value = '';
+    MARCADAS = []; cargarSala();
+  } catch (x) { $('#s-msg').innerHTML = `<span class="err-msg">${esc(x.message)}</span>`; cargarSala(); }
+}
+
+// Boletería con butacas: el vendedor marca en el plano las que se lleva (solo ve libres u ocupadas).
+let P_PLANO = null, P_EV = null, P_OCUP = {}, P_ELEGIDAS = [];
+async function cargarPuntoSala() {
+  if (!CFG?.sala || !EVA) return;
+  try {
+    P_OCUP = (await api('/api/admin/sala?evento=' + encodeURIComponent(EVA))).butacas || {};
+    P_ELEGIDAS = P_ELEGIDAS.filter(id => !P_OCUP[id]);
+    if (!P_PLANO || P_EV !== EVA) {
+      P_EV = EVA; P_ELEGIDAS = [];
+      P_PLANO = Plano.crear($('#p-plano'), { sala: CFG.sala, estado: id => P_ELEGIDAS.includes(id) ? 'elegida' : P_OCUP[id] ? 'ocupada' : 'libre', alTocar: tocarPunto });
+    } else P_PLANO.refrescar();
+    totalPunto();
+  } catch (x) { $('#p-err').textContent = x.message; $('#p-err').style.display = 'block'; }
+}
+function tocarPunto(id) {
+  $('#p-err').style.display = 'none';
+  if (P_ELEGIDAS.includes(id)) P_ELEGIDAS = P_ELEGIDAS.filter(x => x !== id);
+  else {
+    if (P_OCUP[id]) return;
+    const ids = (evElegido()?.tipos || []).map(t => t.id);
+    if (P_ELEGIDAS.length && Plano.tipoDe(CFG.sala, ids, P_ELEGIDAS[0]) !== Plano.tipoDe(CFG.sala, ids, id)) {
+      $('#p-err').textContent = 'Esa butaca es de otra zona, con otro precio: se vende por separado.'; $('#p-err').style.display = 'block'; return;
+    }
+    if (P_ELEGIDAS.length >= 20) return;
+    P_ELEGIDAS.push(id);
+  }
+  P_PLANO.refrescar(); totalPunto();
 }
 
 // ── Herramientas ──
@@ -745,7 +893,7 @@ function siguiente() {
   if (pausada) { $('#reader').style.display = ''; try { escaner.resume(); } catch (e) {} pausada = false; }
 }
 function validarManual() { const c = $('#codigo-manual').value.trim(); if (c) validar(c); $('#codigo-manual').value = ''; }
-function mostrar(clase, titulo, detalle) { const r = $('#res'); r.className = 'resultado ' + clase; r.style.display = 'block'; $('#res-tit').textContent = titulo; $('#res-det').textContent = detalle || ''; }
+function mostrar(clase, titulo, detalle) { const r = $('#res'); r.className = 'resultado ' + clase; r.style.display = 'block'; $('#res-butaca').hidden = true; $('#res-tit').textContent = titulo; $('#res-det').textContent = detalle || ''; }
 async function validar(codigo) {
   try {
     const r = await fetch('/api/validar', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S.token }, body: JSON.stringify({ codigo, evento: EVA, tipo: PUERTA || undefined }) });
@@ -755,6 +903,8 @@ async function validar(codigo) {
     if (d.ok) { mostrar('ok', d.prueba ? 'Prueba OK' : 'Pasa', det); ingresados++; $('#ingresados').textContent = ingresados; sonar('ok'); }
     else if (d.estado === 'usado') { mostrar('warn', 'Ya entró', det); sonar('usado'); }
     else { mostrar('err', d.msg || 'No válida', det); sonar('error'); }
+    // La butaca en grande: el acomodador le indica a dónde ir.
+    if (d.butaca) { $('#res-butaca').textContent = d.butaca; $('#res-butaca').hidden = false; }
     if (navigator.vibrate) navigator.vibrate(d.ok ? 120 : [80, 60, 80]);
   } catch (e) { mostrar('err', 'Sin conexión', 'Probá de nuevo'); sonar('error'); }
 }

@@ -1,0 +1,22 @@
+/* Tema de la Gala 2026 de Santiago Rítmica (13/11/2026): los colores y las letras de la portada nueva, que salen
+   de los dos flyers. Oro y rosa sobre la sala a oscuras; Cormorant (la serif dorada de "El Origen de Ser") para
+   los títulos y Jost para el texto. Las fuentes están en assets/fuentes (no se piden a Google). */
+@font-face{font-family:'Cormorant';src:url(/assets/fuentes/cormorant.woff2) format('woff2');font-weight:300 700;font-style:normal;font-display:swap;}
+@font-face{font-family:'Cormorant';src:url(/assets/fuentes/cormorant-italica.woff2) format('woff2');font-weight:300 700;font-style:italic;font-display:swap;}
+@font-face{font-family:'Jost';src:url(/assets/fuentes/jost.woff2) format('woff2');font-weight:300 700;font-style:normal;font-display:swap;}
+:root{
+  --noche:#120b14; --noche-2:#25101f; --noche-3:#341728; --oro:#e7c47f; --oro-vivo:#fff1d2; --crema:#f7eff3;
+  --gris:#bba9b5; --tierra:#b9893a;
+  --oro-degrade:linear-gradient(180deg,#fff4d9,#e7c47f 55%,#b9893a);
+  --f-display:'Cormorant',Georgia,serif; --f-texto:'Jost',system-ui,sans-serif;
+}
+body{background:radial-gradient(ellipse 70% 40% at 15% 0%,rgba(244,163,204,.14),transparent 70%),
+                radial-gradient(ellipse 70% 40% at 85% 0%,rgba(231,196,127,.12),transparent 70%),var(--noche);}
+/* Cormorant trae números "antiguos" (el 1 chiquito): en precios y horas se leen mal. */
+body{font-variant-numeric:lining-nums;}
+h1{font-weight:600;letter-spacing:0;font-size:clamp(34px,9.5vw,48px);}
+.tarjeta{background:linear-gradient(180deg,rgba(52,23,40,.92),rgba(37,16,31,.94));border-color:rgba(231,196,127,.22);}
+.btn{color:#241606;background:linear-gradient(180deg,#f3d89f,#e7c47f);box-shadow:0 10px 26px rgba(231,196,127,.22);letter-spacing:.02em;}
+.paso span{color:#241606;}
+th{background:rgba(37,16,31,.97) !important;}
+.cabeza img{background:#fff;}

@@ -24,6 +24,9 @@ const Evento = sequelize.define('Evento', {
   externoPrecio:{ type: DataTypes.STRING(80), allowNull: true },     // "Anticipadas $10.000" (solo informativo)
   imagen:      { type: DataTypes.STRING(200), allowNull: true },   // /img/12 o assets/...
   tipos:       json('tipos'),                                      // [{ id, nombre, corto, detalle, precio, cupo }]
+  // Butacas que el organizador se guarda (familia, cámaras, invitados): no salen a la venta.
+  // Una cortesía las puede usar. Solo en las galas con sala: ["5-11", "5-12"].
+  bloqueadas:  json('bloqueadas'),
   publicado:   { type: DataTypes.BOOLEAN, defaultValue: false },   // se ve en la cartelera
   ventaAbierta:{ type: DataTypes.BOOLEAN, defaultValue: true },    // con publicado, se puede comprar
   ventaHasta:  { type: DataTypes.DATEONLY, allowNull: true },       // último día de venta online (después, solo en puerta)
