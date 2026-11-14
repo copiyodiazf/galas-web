@@ -34,7 +34,7 @@ window.Plano = (() => {
         ${filas.map(f => `${f.zona && !filas[filas.indexOf(f) - 1]?.zona ? `<div class="pf-zona">${esc(f.zona)}</div>` : ''}
           <div class="pf${f.zona ? ' zona' : ''}"><span class="pf-n izq">${esc(f.fila)}</span><div class="pf-asientos">
           ${f.items.map(i => i.hueco
-            ? `<span class="hueco${i.texto ? ' cabina' : ''}" style="width:calc(var(--b) * ${i.ancho} + var(--g) * ${i.ancho - 1})">${esc(i.texto || '')}</span>`
+            ? `<span class="hueco${i.texto ? ' cabina' : ' pasillo'}" style="width:calc(var(--b) * ${i.ancho} + var(--g) * ${i.ancho - 1})">${esc(i.texto || '')}</span>`
             : `<button type="button" class="bu" data-id="${esc(i.id)}" aria-label="Fila ${esc(f.fila)}, asiento ${i.n}">${i.n}</button>`).join('')}
           </div><span class="pf-n der">${esc(f.fila)}</span></div>`).join('')}
       </div></div>
@@ -44,7 +44,10 @@ window.Plano = (() => {
     const botones = [...el.querySelectorAll('.bu')];
     const ajustar = () => {
       caja.style.setProperty('--b', tam + 'px'); caja.style.setProperty('--g', Math.max(2, Math.round(tam / 7)) + 'px');
-      el.querySelector('.plano-deslizar').textContent = caja.scrollWidth > caja.clientWidth + 4 ? 'Deslizá el plano para ver toda la fila' : '';
+      const desborda = caja.scrollWidth > caja.clientWidth + 4;
+      el.querySelector('.plano-deslizar').textContent = desborda ? 'Deslizá el plano para ver toda la fila' : '';
+      // Arranca centrado: en una fila con un pasillo en el medio (la 14 de Rítmica) no se veía ninguna butaca.
+      caja.classList.toggle('desborda', desborda);
     };
     // Sin un tamaño elegido antes: si la sala entra entera con butacas de 20 px o más, ese; si no (celular), 26 px y se desliza.
     if (!guardado) {

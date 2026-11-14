@@ -16,6 +16,7 @@
 .precios-sala div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;}
 .precios-sala b{font-family:var(--f-display);font-size:20px;text-align:right;white-space:nowrap;}
 .precios-sala b small.serv{display:block;font-family:var(--f-texto);font-size:11px;font-weight:700;color:var(--gris);}
+small.serv span{white-space:nowrap;}
 .elegidas{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;min-height:34px;align-items:center;}
 .elegidas .chip{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;padding:6px 6px 6px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid var(--oro);}
 .elegidas .chip button{width:24px;height:24px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:var(--crema);font:800 14px var(--f-texto);cursor:pointer;line-height:1;}
@@ -36,6 +37,15 @@ body.con-sala .marco{max-width:820px;}
 .tipo .precio{text-align:right;font-family:var(--f-display);font-weight:700;font-size:23px;line-height:1;}
 .tipo .precio small.serv{display:block;margin-top:4px;font-family:var(--f-texto);font-size:11px;font-weight:700;color:var(--gris);}
 .tipo:has(input:checked){border-color:var(--oro);background:rgba(231,194,125,.1);}
+/* Celular angosto: la tarjeta se salía 22 px a 320 (la grilla no la dejaba achicarse más que la palabra más larga) y,
+   con "+ $2.000 de servicio" al costado, al nombre de la función le quedaba una palabra por renglón. El precio
+   pasa abajo del nombre, al lado del talón (en todos los celulares: a 390 el nombre también iba apretado). */
+@media (max-width:440px){
+  .tipos{grid-template-columns:minmax(0,1fr);}
+  .tipo{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;row-gap:8px;padding:12px 14px;}
+  .tipo .talon{grid-row:span 2;align-self:center;width:48px;padding-right:10px;}
+  .tipo .precio{grid-column:2;text-align:left;font-size:21px;}
+}
 .tipo.agotado{opacity:.45;cursor:not-allowed;}
 .tipo .estado{position:absolute;top:-9px;right:12px;font-weight:800;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
   background:var(--rojo);color:#fff;border-radius:999px;padding:3px 9px;}
@@ -156,7 +166,9 @@ let CFG = null, EV = null, tipo = null, cant = 1;
 // separa entradas, servicio y total. Si no, un solo precio final.
 const desglose = () => Boolean(CFG?.sitio?.desgloseServicio);
 const aMostrar = t => desglose() ? t.precio : t.final;
-const SERV = () => desglose() ? '<small class="serv">+ servicio</small>' : '';
+// El servicio en pesos, por entrada: "+ $2.000 de servicio" (Rítmica, 13/11/2026: ni "+ servicio" ni el porcentaje).
+// En un celular angosto corta entre "+ $2.000" y "de servicio", nunca en el medio de uno.
+const SERV = t => desglose() ? `<small class="serv">${t ? `<span>+ ${pesos(importes(t, 1).cargo)}</span> <span>de servicio</span>` : '+ servicio'}</small>` : '';
 // Igual que el servidor (importes): el cargo se calcula sobre el subtotal de la compra y se redondea una vez.
 function importes(t, n) {
   if (!desglose() || CFG.cargoPct == null) return { subtotal: t.final * n, cargo: 0, total: t.final * n };
@@ -193,12 +205,15 @@ function pintarFechas() {
   const mismoDia = lista.every(x => x.fecha === lista[0].fecha && x.hora);
   $('#fechas').innerHTML = lista.map(e => {
     const [mes, dia] = mismoDia ? ['hs', e.hora.replace(/:00$/, '')] : talon(e);
-    const precios = Object.values(e.tipos).map(aMostrar), desde = Math.min(...precios);
-    const varios = new Set(precios).size > 1;   // con zonas de distinto precio, el más barato es "desde"
+    const tipos = Object.values(e.tipos), precios = tipos.map(aMostrar);
+    // Con butacas, el precio del primer tipo (la platea, la zona principal): "desde $10.000" era la última fila
+    // (Rítmica, 13/11/2026). Sin sala, como siempre: el más barato, con "desde" si hay varios.
+    const desde = SALA() ? precios[0] : Math.min(...precios);
+    const varios = !SALA() && new Set(precios).size > 1;
     return `<label class="tipo"><input type="radio" name="fecha" value="${esc(e.id)}">
       <span class="talon"><small>${esc(mes)}</small><b>${esc(dia)}</b></span>
       <span class="que"><b>${esc(e.nombre)}</b><small>${esc(e.artistas?.join(', ') || e.cuando)}</small></span>
-      <span class="precio">${varios ? '<small class="serv">desde</small>' : ''}${pesos(desde)}${SERV()}</span></label>`;
+      <span class="precio">${varios ? '<small class="serv">desde</small>' : ''}${pesos(desde)}${SERV(tipos[precios.indexOf(desde)])}</span></label>`;
   }).join('');
   document.querySelectorAll('input[name=fecha]').forEach(r => r.addEventListener('change', () => { EV = CFG.eventos.find(e => e.id === r.value); tipo = null; pintarFechas(); pintarTipos(); actualizar(); }));
 }
@@ -235,7 +250,7 @@ function pintarSala() {
     const t = EV.tipos[k], dondeZona = fs.find(f => f.zona)?.zona;
     // "filas 1 a 13" en vez de "filas 1, 2, 3, … 13" (Rítmica): las seguidas se juntan en un tramo.
     const donde = zonas.size > 1 ? ` <small class="ayuda">(${dondeZona && dondeZona !== t.nombre ? esc(dondeZona) + ', ' : ''}fila${fs.length > 1 ? 's' : ''} ${esc(tramosDeFilas(fs.map(f => f.fila)))})</small>` : '';
-    return `<div><span>${esc(t.nombre)}${donde}${t.estado === 'agotado' ? ' · <b style="font-size:13px;color:#ffb3b0">agotada</b>' : ''}</span><b>${pesos(aMostrar(t))}${SERV()}</b></div>`;
+    return `<div><span>${esc(t.nombre)}${donde}${t.estado === 'agotado' ? ' · <b style="font-size:13px;color:#ffb3b0">agotada</b>' : ''}</span><b>${pesos(aMostrar(t))}${SERV(t)}</b></div>`;
   }).join('') + (zonas.size === 1 ? '<p class="ayuda">por butaca</p>' : '<p class="ayuda">por butaca · las de distinto precio se compran por separado</p>');
   if (PLANO_EV !== EV.id) {
     PLANO_EV = EV.id; ELEGIDAS = []; MIA = leerMia();
@@ -295,7 +310,7 @@ function pintarTipos() {
       <input type="radio" name="tipo" value="${esc(k)}" ${agotado ? 'disabled' : ''}>${marca}
       <span class="talon"><small>${esc(mes)}</small><b>${esc(dia)}</b></span>
       <span class="que"><b>${esc(t.nombre)}</b><small>${esc(t.detalle || '')}</small></span>
-      <span class="precio">${pesos(aMostrar(t))}${SERV()}</span></label>`;
+      <span class="precio">${pesos(aMostrar(t))}${SERV(t)}</span></label>`;
   }).join('');
   document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', () => { tipo = r.value; actualizar(); }));
   const inicial = [tipo, pedido, ...Object.keys(EV.tipos)].find(k => k && EV.tipos[k] && EV.tipos[k].estado !== 'agotado');
@@ -456,6 +471,8 @@ $('#compra').addEventListener('submit', async ev => {
     const d = await r.json();
     if (!r.ok) {
       // Alguien eligió una de estas butacas recién: se marcan ocupadas y se sueltan.
+      // Chocó con otra familia: el servidor manda el plano entero de este momento (d.sala) y se repinta todo.
+      if (d.sala) OCUPADAS = new Set(d.sala);
       if (d.ocupadas?.length) { d.ocupadas.forEach(id => OCUPADAS.add(id)); ELEGIDAS = ELEGIDAS.filter(id => !OCUPADAS.has(id)); despuesDeElegir(); $('#plano').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       throw new Error(d.error || 'No se pudo iniciar la compra.');
     }

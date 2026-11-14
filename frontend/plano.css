@@ -4,7 +4,9 @@
 .plano-zoom{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:0 20px 8px;font-size:12px;color:var(--gris);}
 .plano-zoom span{margin-right:auto;}
 .plano-zoom button{width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:var(--crema);font:800 20px var(--f-texto);cursor:pointer;}
-.plano{--b:26px;--g:4px;overflow:auto;-webkit-overflow-scrolling:touch;max-height:70vh;padding:4px 0 14px;overscroll-behavior:contain;
+/* El tope alto: con 70vh, en un celular la fila 14 (la zona verde, la más barata) quedaba escondida abajo,
+   adentro del recuadro (Rítmica, 13/11/2026). */
+.plano{--b:26px;--g:4px;overflow:auto;-webkit-overflow-scrolling:touch;max-height:max(88svh,560px);padding:4px 0 14px;overscroll-behavior:contain;
   border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.18);}
 .plano-sala{display:flex;flex-direction:column;align-items:center;gap:var(--g);width:max-content;min-width:100%;padding:0 6px;}
 .plano-escenario{width:min(70%,560px);margin:10px 0 18px;padding:9px 0;text-align:center;font-weight:800;font-size:12px;letter-spacing:.3em;text-transform:uppercase;
@@ -32,6 +34,7 @@
 .hueco{flex:none;display:grid;place-items:center;font-weight:800;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);
   height:var(--b);border-radius:6px;}
 .hueco.cabina{background:rgba(255,255,255,.07);border:1px dashed rgba(255,255,255,.3);}
+.plano.desborda .hueco.pasillo::before{content:'‹ deslizá para ver las butacas ›';font-weight:600;font-size:11px;letter-spacing:0;text-transform:none;white-space:nowrap;color:var(--gris);}
 .plano-leyenda{display:flex;flex-wrap:wrap;gap:8px 14px;padding:10px 20px 0;font-size:12px;color:var(--gris);}
 .plano-leyenda span{display:inline-flex;align-items:center;gap:6px;}
 .plano-leyenda .bu{--b:16px;cursor:default;pointer-events:none;}

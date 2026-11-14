@@ -74,10 +74,8 @@ section{scroll-margin-top:12px;}
 .portada{position:relative;isolation:isolate;min-height:100svh;display:grid;align-content:center;text-align:center;overflow:hidden;
   padding:calc(30px + env(safe-area-inset-top,0px)) 0 64px;
   background:radial-gradient(ellipse 90% 70% at 50% 30%,var(--ritmica-vivo),var(--ritmica) 55%,var(--ritmica-hondo));}
-.fondo{position:absolute;inset:0;z-index:-2;display:flex;}
-.fondo .col{position:relative;flex:1;background-size:cover;background-position:center;overflow:hidden;}
-.fondo video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .9s ease;}
-.fondo video.activo{opacity:1;}
+.fondo{position:absolute;inset:0;z-index:-2;background:center/cover no-repeat;}
+.fondo video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 .portada::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
   background:radial-gradient(ellipse 70% 55% at 50% 38%,rgba(206,8,109,.55),rgba(206,8,109,.15) 70%),
              linear-gradient(180deg,rgba(142,7,80,.25),transparent 30%,transparent 62%,rgba(23,6,15,.9));}
@@ -92,7 +90,7 @@ section{scroll-margin-top:12px;}
 .portada h1{font-size:clamp(64px,19vw,128px);font-weight:600;color:#fff;margin-top:14px;text-shadow:0 4px 30px rgba(90,0,45,.4);}
 .portada .cuando-gala{font-size:clamp(18px,5vw,23px);font-weight:500;margin-top:10px;}
 .portada .cuando-gala,.faltan,.portada .btn.borde{text-shadow:0 1px 14px rgba(70,0,35,.6);}
-.portada .cuando-gala span{display:block;font-weight:400;opacity:.92;}
+.portada .cuando-gala span{display:block;font-weight:400;opacity:.92;text-wrap:balance;}
 .faltan{display:inline-block;margin-top:18px;padding:7px 16px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);
   font-weight:500;font-size:15.5px;}
 .faltan:empty{display:none;}
@@ -275,7 +273,8 @@ section{scroll-margin-top:12px;}
 @keyframes correr{to{transform:translateX(-50%);}}
 .pista button{flex:none;margin-right:10px;padding:0;border:0;background:#2b0a1f;cursor:zoom-in;border-radius:14px;overflow:hidden;}
 .pista img{width:auto;height:200px;border-radius:14px;}
-.pasarela:hover .pista,.pasarela:focus-within .pista,.pasarela.pausada .pista,.pasarela.fuera .pista{animation-play-state:paused;}
+.pasarela:has(:focus-visible) .pista,.pasarela.pausada .pista,.pasarela.fuera .pista{animation-play-state:paused;}
+@media (hover:hover) and (pointer:fine){.pasarela:hover .pista{animation-play-state:paused;}}
 .ayuda-galeria{font-size:13.5px;color:var(--gris);margin-top:10px;}
 @media (min-width:760px){.pista img{height:260px;}}
 
@@ -283,11 +282,6 @@ section{scroll-margin-top:12px;}
 
 /* ── La sala ── */
 .sala{padding:64px 0;border-top:1px solid rgba(255,255,255,.07);--acento:var(--oro);}
-.elegir{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:22px;max-width:540px;}
-.elegir button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;font:500 12.5px/1.2 var(--texto);color:var(--tinta);text-align:left;
-  background:transparent;border:1px solid rgba(255,255,255,.22);border-radius:14px;padding:9px 12px 10px;cursor:pointer;user-select:none;-webkit-user-select:none;}
-.elegir b{font-family:var(--display);font-weight:700;font-size:28px;line-height:1;}
-.elegir button[aria-pressed=true]{color:#22121b;background:var(--acento);border-color:transparent;}
 .mapa{--d:8px;--g:3px;margin:22px 0 0;padding:18px 0 4px;}
 .escenario{width:min(72%,420px);margin:0 auto 18px;text-align:center;font:500 12px var(--texto);letter-spacing:.06em;color:#fff;
   background:linear-gradient(180deg,var(--ritmica-vivo),var(--ritmica));border-radius:4px 4px 40% 40% / 4px 4px 14px 14px;padding:6px 0 8px;}
@@ -297,16 +291,31 @@ section{scroll-margin-top:12px;}
 .fila .asientos,.tramo{display:flex;gap:var(--g);}
 .tramo i{width:var(--d);height:var(--d);border-radius:50%;background:var(--plata);}
 .verde .tramo i{background:var(--verde);}
-.tramo i.o{background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);}
 .hueco{width:calc(var(--n) * (var(--d) + var(--g)) - var(--g));font-size:9px;line-height:var(--d);text-align:center;color:var(--gris);overflow:hidden;white-space:nowrap;}
 .fila.verde{margin-top:6px;}
 .leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;margin-top:16px;font-size:13.5px;color:var(--gris);}
 .leyenda i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px;background:var(--plata);}
 .leyenda .z{background:var(--verde);}
-.leyenda .o{background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);}
-.cuenta-sala{text-align:center;margin-top:10px;font-size:15px;font-variant-numeric:tabular-nums;}
+.cuenta-sala{text-align:center;margin-top:10px;font-size:14px;color:var(--gris);}
+.talon .aviso-funcion{display:inline-block;margin-top:8px;padding:3px 11px;border-radius:999px;font-size:13px;font-weight:600;color:var(--acento);border:1px solid var(--acento);}
 .sala .btn{display:flex;width:fit-content;margin:22px auto 0;}
 @media (min-width:760px){.mapa{--d:12px;--g:4px;}.fila .n{font-size:12px;width:22px;}}
+@media (max-width:359px){.mapa{--d:7px;--g:2px;}.fila{gap:4px;}.fila .n{width:13px;font-size:9px;}}
+@media (max-width:380px){
+  .funcion{gap:10px;padding:10px 12px;}
+  .funcion b{font-size:32px;}
+  .funcion span{font-size:14px;line-height:1.2;}
+  .funcion em{font-size:13px;padding:7px 11px;}
+  .entrada{grid-template-columns:96px 1fr;
+    -webkit-mask:radial-gradient(circle 11px at 96px 0,transparent 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 11px at 96px 100%,transparent 98%,#000) bottom/100% 51% no-repeat;
+            mask:radial-gradient(circle 11px at 96px 0,transparent 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 11px at 96px 100%,transparent 98%,#000) bottom/100% 51% no-repeat;}
+  .talon{padding:14px 14px 14px 16px;}
+  .talon .hora{font-size:38px;}
+  .talon h3{font-size:22px;}
+  .barra .que .largo{display:none;}
+  .barra .que .corto{display:inline;}
+  .barra .btn{padding:10px 14px;font-size:15px;}
+}
 
 /* ── Cómo se compra, preguntas y cómo llegar ── */
 .pasos,.preguntas,.lugar{padding:56px 0;border-top:1px solid rgba(255,255,255,.07);}
@@ -341,6 +350,7 @@ footer nav{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px;marg
 .barra .que{flex:1;min-width:0;}
 .barra b{display:block;font-family:var(--display);font-size:20px;line-height:1.1;}
 .barra small{display:block;font-size:13px;color:var(--gris);}
+.barra .corto{display:none;}
 .barra .btn{min-height:44px;padding:10px 18px;font-size:16px;}
 .barra .wa{width:44px;min-height:44px;padding:0;background:#1faa59;}
 .barra .wa svg{width:24px;height:24px;}
@@ -447,7 +457,7 @@ footer nav{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px;marg
         <img class="arte" src="assets/arte-divas-900.webp" srcset="assets/arte-divas-600.webp 600w, assets/arte-divas-900.webp 900w"
           sizes="(min-width:900px) 560px, 100vw" width="900" height="910" loading="lazy" decoding="async"
           alt="Silueta de una gimnasta con su pelota, frente a seis paneles con vestuarios de grandes divas del pop">
-        <video class="arte-video" muted loop playsinline preload="none" poster="assets/divas-ia.webp" aria-hidden="true"></video>
+        <video class="arte-video" muted loop playsinline preload="none" poster="assets/divas-ia-2.webp" aria-hidden="true"></video>
         <div class="luces" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="haz uno" aria-hidden="true"></div><div class="haz dos" aria-hidden="true"></div>
         <div class="piso" aria-hidden="true"></div>
@@ -529,18 +539,17 @@ footer nav{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px;marg
 
   <section class="sala" id="sala" aria-labelledby="t-sala">
     <div class="marco">
-      <h2 id="t-sala">Mirá qué butacas quedan</h2>
-      <p class="bajada">El plano del Paraninfo, función por función: tu entrada vale solo para la hora que elegiste.</p>
-      <div class="elegir" id="elegir-sala"></div>
+      <h2 id="t-sala">Así es la sala</h2>
+      <p class="bajada">El Paraninfo de la UNSE tiene 337 butacas numeradas. Las elegís al comprar, en el plano de la función que quieras: ahí ves cuáles quedan libres en ese momento.</p>
       <figure class="mapa">
         <div class="escenario">Escenario</div>
-        <div class="filas" id="mapa" role="img" aria-label="Plano de la sala"></div>
+        <div class="filas" id="mapa" role="img" aria-label="Plano de la sala: escenario adelante, platea en las filas 1 a 13, la cabina de sonido en el medio de la fila 13 y la zona verde en la fila 14, al fondo"></div>
         <figcaption>
-          <p class="cuenta-sala" id="cuenta-sala" aria-live="polite"></p>
-          <p class="leyenda"><span><i></i>Platea libre</span><span><i class="z"></i>Zona verde libre</span><span><i class="o"></i>Ocupada</span></p>
+          <p class="leyenda"><span><i></i>Platea · filas 1 a 13</span><span><i class="z"></i>Zona verde · fila 14</span></p>
+          <p class="cuenta-sala">Los números de cada fila empiezan del lado derecho, mirando hacia el escenario.</p>
         </figcaption>
       </figure>
-      <a class="btn" id="btn-sala" href="/comprar">Elegir butacas</a>
+      <a class="btn" id="btn-sala" href="#funciones">Elegir función y butacas</a>
     </div>
   </section>
 
@@ -599,7 +608,7 @@ footer nav{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px;marg
 
 <div class="barra" id="barra" aria-hidden="true">
   <div class="marco">
-    <div class="que"><b>13 de diciembre</b><small>16, 18 y 21 h</small></div>
+    <div class="que"><b><span class="largo">13 de diciembre</span><span class="corto">Dom 13/12</span></b><small>16, 18 y 21 h</small></div>
     <a class="btn wa" data-wa hidden href="#" aria-label="Consultas por WhatsApp" tabindex="-1"><svg aria-hidden="true"><use href="#i-wa"/></svg></a>
     <a class="btn" id="btn-barra" href="#funciones" tabindex="-1">Elegir función</a>
   </div>
@@ -657,48 +666,33 @@ const FOTOS = [
   ['equipo-monteros', 'El equipo en Monteros, Tucumán'],
   ['conjunto-mallas', 'Un conjunto de la escuela'],
 ];
-// La portada: seis clips de las gimnastas teñidos del rosa de Rítmica con ffmpeg (assets/video/clip-*.mp4 y su cuadro
-// .webp). En la compu, tres recuadros que alternan dos clips cada uno; en el celular, uno solo que pasa por los seis.
-const CLIPS_COMPU = [['gimnasio', 'chiquitas'], ['pelota', 'cierre'], ['mazas', 'peluches']];
-const CLIPS_CELU = [['pelota', 'chiquitas', 'gimnasio', 'cierre', 'mazas', 'peluches']];
-
-// ───── Portada: el video de fondo (sin sonido) y la cuenta regresiva ─────
+// ───── Portada: el video de danza fusión de fondo (sin sonido) y la cuenta regresiva ─────
+// Una sola pantalla con las 12 fotos de danza fusión del video que mandó José (13/11/2026: va a ser de lo que más se
+// vea en la gala), cada una con un movimiento lento y fundido a la siguiente, en loop sin salto. El original era
+// vertical con bandas negras: se rearmó en dos versiones con su encuadre por foto, horizontal para la compu y
+// vertical para el celular (assets/video/fusion-*.mp4 y su primer cuadro .webp). Antes eran seis clips en tres recuadros.
 {
-  const fondo = $('#fondo'), recuadros = [];
-  const clip = (n, ext) => `assets/video/clip-${n}.${ext}`;
-  for (const lista of COMPU ? CLIPS_COMPU : CLIPS_CELU) {
-    const col = document.createElement('div');
-    col.className = 'col'; col.style.backgroundImage = `url(${clip(lista[0], 'webp')})`;
-    fondo.appendChild(col);
-    if (QUIETO || AHORRO) continue;   // sin video: queda el cuadro de muestra del primero
-    // Dos videos por recuadro que se pasan la posta: mientras uno se ve, el otro ya tiene cargado el que sigue.
-    const vs = [0, 1].map(() => {
-      const v = document.createElement('video');
-      Object.assign(v, { muted: true, playsInline: true, preload: 'auto' });
-      v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
-      col.appendChild(v); return v;
-    });
-    let k = 0, cual = 0;
-    const poner = (v, i) => { const s = clip(lista[i % lista.length], 'mp4'); if (!v.src.endsWith(s)) v.src = s; v.currentTime = 0; };
-    poner(vs[0], 0); poner(vs[1], 1); vs[0].classList.add('activo');
-    const rec = { quieto: false, play: () => vs[cual].play().catch(() => {}), pause: () => vs.forEach(v => v.pause()) };
-    vs.forEach(v => v.addEventListener('ended', () => {
-      if (v !== vs[cual]) return;
-      const prox = vs[1 - cual];
-      k++; cual = 1 - cual;
-      prox.classList.add('activo'); v.classList.remove('activo');
-      if (!rec.quieto) prox.play().catch(() => {});
-      setTimeout(() => poner(v, k + 1), 1000);   // después del fundido, el que terminó carga el siguiente
-    }));
-    recuadros.push(rec);
+  const fondo = $('#fondo'), vertical = matchMedia('(max-aspect-ratio: 1/1)');
+  const archivo = ext => `assets/video/fusion-${vertical.matches ? 'celu' : 'compu'}.${ext}`;
+  let video = null, quieto = false, visible = true;
+  const mover = () => { if (!video) return; if (quieto || !visible) video.pause(); else video.play().catch(() => {}); };
+  const poner = () => {
+    fondo.style.backgroundImage = `url(${archivo('webp')})`;   // se ve mientras carga, y siempre sin video
+    if (video && !video.src.endsWith(archivo('mp4'))) { video.poster = archivo('webp'); video.src = archivo('mp4'); mover(); }
+  };
+  if (!QUIETO && !AHORRO) {
+    video = document.createElement('video');
+    Object.assign(video, { muted: true, playsInline: true, loop: true, preload: 'auto' });
+    video.setAttribute('muted', ''); video.setAttribute('playsinline', '');
+    fondo.appendChild(video);
   }
-  if (recuadros.length) {
-    // Botón para frenarlos (se repiten sin fin: WCAG 2.2.2). Además solo corren mientras se ve la portada.
-    let quieto = false, visible = true;
+  poner();
+  vertical.addEventListener('change', poner);   // girar el celular o cambiar la ventana de forma cambia de versión
+  if (video) {
+    // Botón para frenarlo (se repite sin fin: WCAG 2.2.2). Además solo corre mientras se ve la portada.
     const b = document.createElement('button');
     Object.assign(b, { type: 'button', className: 'pausa pausa-video', textContent: 'Pausar video' });
     b.setAttribute('aria-pressed', 'false');
-    const mover = () => recuadros.forEach(r => { r.quieto = quieto || !visible; if (r.quieto) r.pause(); else r.play(); });
     b.addEventListener('click', () => { quieto = !quieto; b.setAttribute('aria-pressed', String(quieto)); b.textContent = quieto ? 'Ver video' : 'Pausar video'; mover(); });
     $('#portada').appendChild(b);
     new IntersectionObserver(([en]) => { visible = en.isIntersecting; mover(); }).observe($('#portada'));
@@ -750,11 +744,13 @@ function mirarEscena(escena, mundo, clase, susNubes) {
 }
 mirarEscena($('#escena-divas'), $('#divas'), 'encendida', [brillos]);
 mirarEscena($('#escena-origen'), $('#origen'), 'abierta', [plumas, brasas]);
+// Cada versión nueva de un video va con OTRO nombre (divas-ia-2, -3…): el servidor deja que el navegador guarde
+// videos e imágenes un día, y con el mismo nombre se seguía viendo el viejo (13/11/2026).
 // Los dos flyers animados con IA (Kling 2.5 Turbo Pro por fal.ai, 13/11/2026): en Divas la gimnasta mueve el brazo
 // y la pelota; en El Origen vuelan las palomas, caen plumas, el demonio se mueve y arde el fuego. Cada video se pide
 // recién al acercarse, corre solo mientras se ve y se frena con la pausa. Con él andando, las copias que movía el
 // CSS (.capa) y los destellos se apagan: el video ya lo hace.
-const videosIA = [['escena-divas', 'assets/divas-ia.mp4'], ['escena-origen', 'assets/origen-ia.mp4']].map(([id, src]) => {
+const videosIA = [['escena-divas', 'assets/divas-ia-2.mp4'], ['escena-origen', 'assets/origen-ia.mp4']].map(([id, src]) => {
   const escena = $('#' + id), v = escena.querySelector('.arte-video'), x = { v, visible: false };
   v.addEventListener('playing', () => { v.classList.add('lista'); escena.classList.add('con-video'); }, { once: true });
   new IntersectionObserver(([en]) => {
@@ -818,6 +814,12 @@ if (PREVIA) {
     <button class="btn" type="button" style="margin-top:16px" popovertarget="p-previa" popovertargetaction="hide">Entendido</button></div>
     <p style="position:fixed;top:10px;right:10px;z-index:30;margin:0;font:600 11px var(--texto);letter-spacing:.08em;color:var(--ritmica);background:#fff;padding:5px 11px;border-radius:99px;">Vista previa</p>`);
   $('#ya').hidden = true;
+  document.addEventListener('click', ev => {
+    const a = ev.target.closest('a[href^="/"], a[href="#"]');
+    if (!a || a.closest('[popover]')) return;
+    ev.preventDefault();
+    try { $('#p-previa').showPopover(); } catch {}
+  });
 }
 const eventoDe = id => CFG?.eventos?.find(e => e.id === id) || null;
 const agotado = e => Object.values(e.tipos || {}).every(t => t.estado === 'agotado');
@@ -825,11 +827,9 @@ const desglose = () => Boolean(CFG?.sitio?.desgloseServicio);
 function textoPrecios(e) {
   const t = e?.tipos || {}, p = t.platea, z = t['zona-verde'];
   if (!p) return '';
-  const base = x => desglose() ? x.precio : x.final;
-  let s = `Platea <b>${pesos(base(p))}</b>` + (z ? ` y zona verde, la última fila, <b>${pesos(base(z))}</b>` : '');
-  if (desglose()) s += `, más ${CFG.cargoPct} % de servicio: <b>${pesos(p.final)}</b>${z ? ` y <b>${pesos(z.final)}</b>` : ''} en total.`;
-  else s += '.';
-  return s;
+  // El servicio en pesos y no en porcentaje (José, 13/11/2026): "$20.000 más $2.000 de servicio".
+  const uno = x => desglose() ? `<b>${pesos(x.precio)}</b> más ${pesos(x.final - x.precio)} de servicio (<b>${pesos(x.final)}</b> en total)` : `<b>${pesos(x.final)}</b>`;
+  return `Platea ${uno(p)}` + (z ? `; zona verde, la última fila, ${uno(z)}` : '') + '.';
 }
 function prepararBotones() {
   for (const a of $$('[data-ev]')) {
@@ -844,50 +844,26 @@ function prepararBotones() {
     if (PREVIA) { a.href = '#'; a.addEventListener('click', ev => { ev.preventDefault(); try { $('#p-previa').showPopover(); } catch {} }); }
   }
 }
-// La sala de cada función: las butacas ocupadas vienen de /api/sala (la misma que usa la compra).
-let salaEv = null;
-const cacheSala = new Map();
-async function ocupadasDe(id) {
-  if (PREVIA) return [];
-  const c = cacheSala.get(id);
-  if (c && Date.now() - c.t < 20000) return c.v;
-  const r = await fetch('/api/sala?evento=' + encodeURIComponent(id));
-  if (!r.ok) throw new Error('sala');
-  const v = (await r.json()).ocupadas || [];
-  cacheSala.set(id, { t: Date.now(), v });
-  return v;
-}
-function pintarMapa(ocupadas) {
-  const s = CFG.sitio.sala, oc = new Set(ocupadas), der = s.asiento1 === 'derecha';
-  let libres = 0;
-  // En el plano, el escenario arriba: si el asiento 1 está a la derecha, cada fila se dibuja al revés.
+// "Así es la sala": la forma del Paraninfo (escenario, filas, cabina y zona verde), SIN disponibilidad. Lo libre
+// cambia a cada segundo en la apertura de la venta y se ve solo en la compra (José, 13/11/2026).
+function pintarSala() {
+  const s = CFG.sitio.sala, der = s.asiento1 === 'derecha';
   $('#mapa').innerHTML = s.filas.map(f => {
     const bloques = der ? [...f.bloques].reverse() : f.bloques;
-    const partes = bloques.map(b => {
-      if (b.hueco) return `<span class="hueco" style="--n:${b.ancho}">${esc(b.texto || '')}</span>`;
-      const puntos = [];
-      for (let k = 0; k <= b.hasta - b.desde; k++) {
-        const num = der ? b.hasta - k : b.desde + k, o = oc.has(`${f.fila}-${num}`);
-        if (!o) libres++;
-        puntos.push(o ? '<i class="o"></i>' : '<i></i>');
-      }
-      return `<span class="tramo">${puntos.join('')}</span>`;
-    }).join('');
+    const partes = bloques.map(b => b.hueco ? `<span class="hueco" style="--n:${b.ancho}">${esc(b.texto || '')}</span>`
+      : `<span class="tramo">${'<i></i>'.repeat(b.hasta - b.desde + 1)}</span>`).join('');
     return `<div class="fila${f.tipo === 'zona-verde' ? ' verde' : ''}"><span class="n">${esc(f.fila)}</span><span class="asientos">${partes}</span><span class="n" aria-hidden="true"></span></div>`;
   }).join('');
-  $('#cuenta-sala').innerHTML = `<b>${libres}</b> butacas libres de ${s.total} a las ${esc(hora(eventoDe(salaEv)))}`;
-  $('#mapa').setAttribute('aria-label', `Plano de la sala a las ${hora(eventoDe(salaEv))}: ${libres} butacas libres de ${s.total}`);
 }
-async function verSala(id) {
-  salaEv = id;
-  const e = eventoDe(id);
-  $$('#elegir-sala button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ev === id)));
-  $('#sala').style.setProperty('--acento', id === 'divas-del-pop' ? 'var(--rosa)' : 'var(--oro)');
-  const btn = $('#btn-sala');
-  btn.textContent = `Elegir butacas para las ${hora(e)}`;
-  btn.href = PREVIA ? '#' : '/comprar?evento=' + encodeURIComponent(id);
-  try { pintarMapa(await ocupadasDe(id)); }
-  catch { pintarMapa([]); $('#cuenta-sala').textContent = 'No pudimos ver la sala de esta función. Probá de nuevo en un rato.'; }
+// En la entrada de cada función, un aviso que no se desactualiza: "Últimas butacas" (quedan pocas) o "Agotada".
+function avisosDeFunciones() {
+  for (const p of $$('[data-desde]')) {
+    const e = eventoDe(p.dataset.desde); if (!e) continue;
+    // Lo dice la platea: la zona verde tiene solo 16 butacas y el sistema la marca siempre "quedan pocas".
+    const estados = Object.values(e.tipos).map(t => t.estado), principal = (e.tipos.platea || Object.values(e.tipos)[0]).estado;
+    const aviso = estados.every(x => x === 'agotado') ? 'Agotada' : principal === 'pocas' || principal === 'agotado' ? 'Últimas butacas' : '';
+    if (aviso) p.insertAdjacentHTML('afterend', `<p class="aviso-funcion">${aviso}</p>`);
+  }
 }
 
 (PREVIA ? Promise.resolve(PREVIA) : fetch('/api/config').then(r => r.json())).then(c => {
@@ -909,19 +885,18 @@ async function verSala(id) {
   for (const p of $$('[data-precios]')) p.innerHTML = textoPrecios(eventoDe(p.dataset.precios) || ref);
   for (const p of $$('[data-desde]')) {
     const e = eventoDe(p.dataset.desde); if (!e) continue;
-    const vals = Object.values(e.tipos).map(t => desglose() ? t.precio : t.final);
-    p.innerHTML = `Desde <b class="n">${pesos(Math.min(...vals))}</b>${desglose() ? ' más servicio' : ''}`;
+    // El precio de la platea (José, 13/11: no "desde $10.000", que es la zona verde de la última fila)
+    const t = e.tipos.platea || Object.values(e.tipos)[0];
+    p.innerHTML = `<b class="n">${pesos(desglose() ? t.precio : t.final)}</b>${desglose() ? ` más ${pesos(t.final - t.precio)} de servicio` : ''}`;
   }
   if (c.reservaMinutos) {
     const txt = `Desde una cuenta a tu nombre. Tus butacas quedan apartadas ${c.reservaMinutos} minutos: si la transferencia no llega en ese tiempo, se liberan para otros.`;
     $('#paso-pago').textContent = txt;
     $('#faq-pago').textContent = `Por transferencia, desde una cuenta a tu nombre. Tus butacas quedan apartadas ${c.reservaMinutos} minutos mientras pagás: si la transferencia no llega en ese tiempo, se liberan para otros.`;
   }
-  const lista = ['divas-del-pop', 'el-origen-de-ser-18', 'el-origen-de-ser-21'].map(eventoDe).filter(Boolean);
-  if (!c.sitio?.sala || !lista.length) { $('#sala').hidden = true; return; }
-  $('#elegir-sala').innerHTML = lista.map(e => `<button type="button" data-ev="${esc(e.id)}" aria-pressed="false"><b>${esc(hora(e))}</b>${e.id === 'divas-del-pop' ? 'Divas del Pop' : 'El Origen de Ser'}</button>`).join('');
-  $$('#elegir-sala button').forEach(b => b.addEventListener('click', () => verSala(b.dataset.ev)));
-  verSala((gala || lista[0]).id);
+  avisosDeFunciones();
+  if (!c.sitio?.sala) { $('#sala').hidden = true; return; }
+  pintarSala();
 }).catch(() => { $('#nota-precios').textContent = 'No pudimos cargar los precios. Revisá tu conexión y recargá la página.'; $('#sala').hidden = true; });
 if (!PREVIA) fetch('/api/visita', { method: 'POST' }).catch(() => {});
 

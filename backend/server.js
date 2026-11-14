@@ -358,7 +358,10 @@ async function apartarButacas(ev, datos, { cortesia = false, reemplazar = false 
   const ocupadas = pedidas.filter(b => tomadas.has(b) || (!cortesia && bloq.has(b)))
   if (ocupadas.length) {
     const quien = ocupadas.length === 1 ? `La butaca ${etiquetaDe(ocupadas[0])} ya no está libre` : `Las butacas ${resumenButacas(SALA, ocupadas)} ya no están libres`
-    return { status: 409, error: `${quien}: alguien la${ocupadas.length === 1 ? '' : 's'} eligió recién. Elegí otra${ocupadas.length === 1 ? '' : 's'}.`, ocupadas }
+    // `sala`: todo lo que no está libre en este momento, para que la compra repinte el plano entero y no se vuelva a
+    // elegir algo que ya se fue (en la apertura de la venta el plano de cada uno queda viejo en segundos).
+    return { status: 409, error: `${quien}: alguien la${ocupadas.length === 1 ? '' : 's'} eligió recién. Elegí otra${ocupadas.length === 1 ? '' : 's'}.`, ocupadas,
+      sala: [...tomadas.keys(), ...(cortesia ? [] : bloq)] }
   }
   if (persona) {
     const [n] = await Orden.update({ estado: 'abandonada' }, { transaction, where: { evento: ev.id, metodo: 'chytapay', estado: 'pendiente',
@@ -375,20 +378,21 @@ async function apartarButacas(ev, datos, { cortesia = false, reemplazar = false 
   return {}
 }
 
-// Un solo proceso a la vez cuenta el cupo y crea la orden (bloqueo con nombre de MySQL).
-// El nombre lleva la base: varios sistemas pueden compartir el mismo servidor de Aiven.
-const LOCK = `cupo_${String(process.env.DB_NAME || 'gala').replace(/[^A-Za-z0-9_]/g, '').slice(0, 50)}`
-async function conCupo(trabajo) {
+// Una compra a la vez por función cuenta el cupo (o mira las butacas) y crea la orden: se traba la fila del evento
+// con FOR UPDATE y la traba dura hasta que la transacción se confirma. Antes era GET_LOCK y se soltaba en el
+// `finally`, ANTES del commit: la compra siguiente miraba la sala sin ver la recién guardada y podía tomar la misma
+// butaca (o pasar el cupo). La prueba de carga del 13/11/2026 (herramientas/prueba-carga.mjs) lo encontró: 2 butacas
+// dobles con 300 compras a la vez. Por función, además, las de las 16, 18 y 21 h no se esperan entre sí.
+// Va primero en la transacción: el resto de las lecturas (la "foto" de REPEATABLE READ) se hace ya con la traba.
+async function conCupo(eventoId, trabajo) {
   return sequelize.transaction(async transaction => {
-    const [r] = await sequelize.query('SELECT GET_LOCK(?, 15) AS ok', { replacements: [LOCK], type: QueryTypes.SELECT, transaction })
-    if (!r || Number(r.ok) !== 1) throw new Error('No se pudo reservar el cupo, probá de nuevo')
-    try { return await trabajo(transaction) }
-    finally { await sequelize.query('SELECT RELEASE_LOCK(?)', { replacements: [LOCK], type: QueryTypes.SELECT, transaction }) }
+    await sequelize.query('SELECT id FROM eventos WHERE id = ? FOR UPDATE', { replacements: [eventoId], type: QueryTypes.SELECT, transaction })
+    return trabajo(transaction)
   })
 }
 // Valida evento, tipo y cantidad, y crea la orden si hay lugar. Devuelve { orden } o { error, status }.
 async function crearOrdenConCupo(datos, opciones = {}) {
-  return conCupo(async transaction => {
+  const r = await conCupo(datos.evento, async transaction => {
     const ev = eventoDe(datos.evento)
     // Con sala, lo que manda es que cada butaca esté libre (es el cupo, butaca por butaca).
     if (usaSala(ev)) {
@@ -396,7 +400,6 @@ async function crearOrdenConCupo(datos, opciones = {}) {
       const r = await apartarButacas(ev, datos, opciones, transaction)
       if (r.error) return r
       const orden = await Orden.create(datos, { transaction })
-      sinCacheSala(ev.id)
       return { orden }
     }
     const oc = await ocupacion(datos.evento, transaction)
@@ -408,6 +411,9 @@ async function crearOrdenConCupo(datos, opciones = {}) {
     const orden = await Orden.create(datos, { transaction })
     return { orden }
   })
+  // El plano público se vuelve a armar recién con la compra ya confirmada (si no, podía guardarse 3 s sin ella).
+  if (r.orden || r.ocupadas) sinCacheSala(datos.evento)
+  return r
 }
 // online: el evento tiene que estar publicado y con venta abierta. Punto de venta y cortesías: alcanza
 // con que no haya pasado (en la boletería se vende aunque online esté cerrado).
@@ -647,7 +653,7 @@ async function confirmarYEmitir(orden, extra = {}) {
   if (orden.butacas && SALA) {
     // Con butacas: con el bloqueo tomado, que sigan siendo suyas. Si el pago llegó tarde y ya se vendieron,
     // se le dan las mejores que queden juntas; si no queda ninguna, no se emite y lo decide la academia.
-    const r = await conCupo(async transaction => {
+    const r = await conCupo(orden.evento, async transaction => {
       const ev = eventoDe(orden.evento)
       const tomadas = await butacasTomadas(orden.evento, { transaction, excepto: orden.id })
       const bloq = new Set(ev?.bloqueadas || [])
@@ -661,6 +667,7 @@ async function confirmarYEmitir(orden, extra = {}) {
       const [n] = await Orden.update(campos, { where: sinEmitir, transaction })
       return { n }
     })
+    sinCacheSala(orden.evento)
     if (r.sinLugar) {
       console.log(`⚠️ Orden ${orden.id}: pagó pero ya no quedan butacas de ${orden.tipo}. Lo decide la academia (devolver o ubicar a mano).`)
       await SinImputar.create({ avisoId: `sin_butacas_${orden.id}`, motivo: 'sin_butacas', monto: orden.total, pagador: extra.pagador || null,
@@ -712,7 +719,10 @@ const compraParaRetomar = v => Orden.findOne({ where: { estado: 'pendiente', met
   createdAt: { [Op.gte]: new Date(Date.now() - (RESERVA_MINUTOS - RETOMAR_MINIMO) * 60000) },
   evento: v.evento, tipo: v.tipo, cantidad: v.cantidad, dni: v.dni, email: v.email, butacas: v.butacas || null }, order: [['createdAt', 'DESC']] })
 
-app.post('/api/orders', rateLimit({ windowMs: 60000, max: 30 }), async (req, res) => {
+// Por conexión (IP): en los datos móviles muchas familias salen por la MISMA IP (CGNAT), y en la apertura de una venta
+// con butacas todas compran a la vez. Se suben desde Render sin tocar el código (MAX_COMPRAS_IP_MINUTO, MAX_SALA_IP_MINUTO).
+const COMPRAS_IP_MINUTO = numEnv('MAX_COMPRAS_IP_MINUTO', 30), SALA_IP_MINUTO = numEnv('MAX_SALA_IP_MINUTO', 120)
+app.post('/api/orders', rateLimit({ windowMs: 60000, max: COMPRAS_IP_MINUTO }), async (req, res) => {
   try {
     if (!VENTA_ABIERTA) return res.status(403).json({ error: 'La venta online todavía no está abierta.' })
     if (!chytapayConfigurado()) return res.status(503).json({ error: 'El cobro online no está disponible en este momento.' })
@@ -732,7 +742,7 @@ app.post('/api/orders', rateLimit({ windowMs: 60000, max: 30 }), async (req, res
     const { subtotal, cargo, total } = importes(v.precio, v.cantidad, CARGO_PCT)
     const { precio, ...datos } = v
     const r = await crearOrdenConCupo({ id, ...datos, metodo: 'chytapay', subtotal, cargo, total, estado: 'pendiente' }, { reemplazar: true })
-    if (r.error) return res.status(r.status).json({ error: r.error, ...(r.ocupadas ? { ocupadas: r.ocupadas } : {}) })
+    if (r.error) return res.status(r.status).json({ error: r.error, ...(r.ocupadas ? { ocupadas: r.ocupadas, sala: r.sala } : {}) })
     pendientesPorIp.get(ip)?.push({ id, t: Date.now() }) ?? pendientesPorIp.set(ip, [{ id, t: Date.now() }])
 
     // Si Chytapay falla, la orden se borra: si no, guardaría lugar en el cupo sin poder pagarse.
@@ -1288,7 +1298,7 @@ app.post('/api/admin/entrada-cortesia', requireAuth(ORGANIZACION), async (req, r
     if (!tipo) return res.status(400).json({ error: 'Elegí el tipo de entrada' })
     const r = await crearOrdenConCupo({ id: 'orden_' + randomUUID(), evento: ev.id, tipo, nombre, email, dni: String(req.body?.dni || '').replace(/\D/g, '') || null,
       metodo: 'cortesia', vendedor: req.usuario.usuario, cantidad, butacas, subtotal: 0, cargo: 0, total: 0, estado: 'pagada', pagadaEn: new Date() }, { cortesia: true })
-    if (r.error) return res.status(r.status).json({ error: r.error, ...(r.ocupadas ? { ocupadas: r.ocupadas } : {}) })
+    if (r.error) return res.status(r.status).json({ error: r.error, ...(r.ocupadas ? { ocupadas: r.ocupadas, sala: r.sala } : {}) })
     await emitirEntradas(r.orden)
     console.log(`🎫 Cortesía: ${cantidad} ${ev.id}/${tipo} → ${email} (por ${req.usuario.usuario})`)
     res.json({ ok: true, ordenId: r.orden.id, cantidad, email })
@@ -1309,7 +1319,7 @@ app.post('/api/admin/venta-punto', requireAuth(['venta', 'admin']), async (req, 
     const { precio, ...datos } = v
     const r = await crearOrdenConCupo({ id: 'orden_' + randomUUID(), ...datos, metodo: 'punto', vendedor: req.usuario.usuario, cobro,
       subtotal, cargo, total, estado: 'pagada', pagadaEn: new Date() })
-    if (r.error) return res.status(r.status).json({ error: r.error, ...(r.ocupadas ? { ocupadas: r.ocupadas } : {}) })
+    if (r.error) return res.status(r.status).json({ error: r.error, ...(r.ocupadas ? { ocupadas: r.ocupadas, sala: r.sala } : {}) })
     const { entradas } = await emitirEntradas(r.orden)
     console.log(`💵 Venta en punto (${req.usuario.usuario}, ${cobro}): ${v.cantidad} ${v.evento}/${v.tipo}${v.butacas ? ` [${v.butacas}]` : ''} → ${v.email} · ${pesos(total)}`)
     res.json({ ok: true, ordenId: r.orden.id, total, qrs: entradas.map(e => ({ indice: e.indice, url: urlQR(e.codigo), butaca: e.butaca ? etiquetaDe(e.butaca) : null })) })
@@ -1470,7 +1480,7 @@ app.post('/api/admin/chytapay/sede', requireAuth(['admin']), async (_req, res) =
 // organizador) ni de quién. "orden" = la compra sin pagar de este navegador: sus butacas se muestran libres
 // para él, así puede volver a pagarlas o cambiarlas (el número de compra no se adivina).
 const _salaCache = new Map()   // evento → { t, ocupadas }
-app.get('/api/sala', rateLimit({ windowMs: 60000, max: 120 }), async (req, res) => {
+app.get('/api/sala', rateLimit({ windowMs: 60000, max: SALA_IP_MINUTO }), async (req, res) => {
   const ev = eventoDe(req.query.evento)
   if (!usaSala(ev) || !Number(ev.publicado)) return res.status(404).json({ error: 'Esta fecha no tiene butacas numeradas' })
   try {
@@ -1522,7 +1532,7 @@ app.post('/api/admin/sala/bloquear', requireAuth(ORGANIZACION), async (req, res)
     const lista = leerButacas(req.body?.butacas, SALA)
     if (!lista?.length) return res.status(400).json({ error: 'Elegí las butacas en el plano' })
     const bloquear = req.body?.bloquear !== false
-    const r = await conCupo(async transaction => {
+    const r = await conCupo(ev.id, async transaction => {
       const fila = await Evento.findByPk(ev.id, { transaction })
       const actuales = new Set(fila.bloqueadas || [])
       if (bloquear) {
