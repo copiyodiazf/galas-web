@@ -76,9 +76,11 @@ section{scroll-margin-top:12px;}
   background:radial-gradient(ellipse 90% 70% at 50% 30%,var(--ritmica-vivo),var(--ritmica) 55%,var(--ritmica-hondo));}
 .fondo{position:absolute;inset:0;z-index:-2;background:center/cover no-repeat;}
 .fondo video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+/* Más liviana desde las fotos de danza fusión (13/11): la de los clips rosas apagaba las fotos. Rosa más hondo y
+   más concentrado detrás del logo y el texto, para que se sigan leyendo. */
 .portada::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
-  background:radial-gradient(ellipse 70% 55% at 50% 38%,rgba(206,8,109,.55),rgba(206,8,109,.15) 70%),
-             linear-gradient(180deg,rgba(142,7,80,.25),transparent 30%,transparent 62%,rgba(23,6,15,.9));}
+  background:radial-gradient(ellipse 60% 50% at 50% 42%,rgba(150,4,78,.42),rgba(206,8,109,.08) 72%),
+             linear-gradient(180deg,rgba(142,7,80,.22),transparent 26%,transparent 66%,rgba(23,6,15,.85));}
 .cinta{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;overflow:visible;}
 .cinta path{fill:none;stroke:var(--ritmica-palido);stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:0;}
 .cinta .c1{stroke-width:3;opacity:.75;}
@@ -670,10 +672,11 @@ const FOTOS = [
 // Una sola pantalla con las 12 fotos de danza fusión del video que mandó José (13/11/2026: va a ser de lo que más se
 // vea en la gala), cada una con un movimiento lento y fundido a la siguiente, en loop sin salto. El original era
 // vertical con bandas negras: se rearmó en dos versiones con su encuadre por foto, horizontal para la compu y
-// vertical para el celular (assets/video/fusion-*.mp4 y su primer cuadro .webp). Antes eran seis clips en tres recuadros.
+// vertical para el celular (assets/video/fusion-*-hd.mp4 y su primer cuadro .webp). Antes eran seis clips en tres recuadros.
 {
   const fondo = $('#fondo'), vertical = matchMedia('(max-aspect-ratio: 1/1)');
-  const archivo = ext => `assets/video/fusion-${vertical.matches ? 'celu' : 'compu'}.${ext}`;
+  // -hd: Full HD y con más nitidez (José, 13/11); nombre nuevo para que el navegador no muestre la primera versión.
+  const archivo = ext => `assets/video/fusion-${vertical.matches ? 'celu' : 'compu'}-hd.${ext}`;
   let video = null, quieto = false, visible = true;
   const mover = () => { if (!video) return; if (quieto || !visible) video.pause(); else video.play().catch(() => {}); };
   const poner = () => {
