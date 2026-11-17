@@ -54,9 +54,9 @@ export function resumenButacas(sala, ids) {
   return [...porFila].map(([f, ns]) => `Fila ${f}: ${ns.sort((a, b) => a - b).join(', ')}`).join(' · ')
 }
 
-// Cuántas butacas de cada tipo tiene la sala para este evento, sin las que el organizador se guardó.
+// Cuántas butacas de cada tipo tiene la sala para este evento, sin las que el organizador se guardó ni las reservadas.
 export function cupoDeSala(sala, ev) {
-  const bloq = new Set(ev?.bloqueadas || [])
+  const bloq = new Set([...(ev?.bloqueadas || []), ...(ev?.reservadas || [])])
   const cupo = {}
   for (const id of sala.porId.keys()) {
     if (bloq.has(id)) continue

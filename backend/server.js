@@ -354,14 +354,14 @@ async function apartarButacas(ev, datos, { cortesia = false, reemplazar = false 
   const pedidas = butacasDe(datos)
   const persona = reemplazar ? { dni: datos.dni, email: datos.email } : null
   const tomadas = await butacasTomadas(ev.id, { transaction, deLaPersona: persona })
-  const bloq = new Set(ev.bloqueadas || [])
-  const ocupadas = pedidas.filter(b => tomadas.has(b) || (!cortesia && bloq.has(b)))
+  const bloq = new Set(ev.bloqueadas || []), resv = new Set(ev.reservadas || [])   // las reservadas, ni como cortesía
+  const ocupadas = pedidas.filter(b => tomadas.has(b) || resv.has(b) || (!cortesia && bloq.has(b)))
   if (ocupadas.length) {
     const quien = ocupadas.length === 1 ? `La butaca ${etiquetaDe(ocupadas[0])} ya no está libre` : `Las butacas ${resumenButacas(SALA, ocupadas)} ya no están libres`
     // `sala`: todo lo que no está libre en este momento, para que la compra repinte el plano entero y no se vuelva a
     // elegir algo que ya se fue (en la apertura de la venta el plano de cada uno queda viejo en segundos).
     return { status: 409, error: `${quien}: alguien la${ocupadas.length === 1 ? '' : 's'} eligió recién. Elegí otra${ocupadas.length === 1 ? '' : 's'}.`, ocupadas,
-      sala: [...tomadas.keys(), ...(cortesia ? [] : bloq)] }
+      sala: [...tomadas.keys(), ...resv, ...(cortesia ? [] : bloq)] }
   }
   if (persona) {
     const [n] = await Orden.update({ estado: 'abandonada' }, { transaction, where: { evento: ev.id, metodo: 'chytapay', estado: 'pendiente',
@@ -656,7 +656,7 @@ async function confirmarYEmitir(orden, extra = {}) {
     const r = await conCupo(orden.evento, async transaction => {
       const ev = eventoDe(orden.evento)
       const tomadas = await butacasTomadas(orden.evento, { transaction, excepto: orden.id })
-      const bloq = new Set(ev?.bloqueadas || [])
+      const bloq = new Set([...(ev?.bloqueadas || []), ...(ev?.reservadas || [])])
       const mias = butacasDe(orden)
       if (mias.some(b => tomadas.has(b) || bloq.has(b))) {
         const nuevas = ev && elegirMejores(SALA, ev, orden.tipo, mias.length, id => !tomadas.has(id) && !bloq.has(id))
@@ -1161,7 +1161,8 @@ async function vendidasPorEvento() {
 app.get('/api/admin/eventos', requireAuth(ORGANIZACION), async (_req, res) => {
   try {
     const v = await vendidasPorEvento()
-    res.json({ eventos: [...EVENTOS.values()].map(e => ({ ...e, cuando: cuandoDe(e), pasado: !noPaso(e), vendible: vendibleOnline(e),
+    // Las reservadas no viajan al panel (ver el modelo Evento).
+    res.json({ eventos: [...EVENTOS.values()].map(({ reservadas: _r, ...e }) => ({ ...e, cuando: cuandoDe(e), pasado: !noPaso(e), vendible: vendibleOnline(e),
       vendidas: v[e.id]?.entradas || 0, recaudado: v[e.id]?.recaudado || 0, porTipo: v[e.id]?.porTipo || {} })) })
   } catch (e) {
     console.error('❌ Error listando eventos:', e?.message || e)
@@ -1493,7 +1494,7 @@ app.get('/api/sala', rateLimit({ windowMs: 60000, max: SALA_IP_MINUTO }), async 
     const mia = String(req.query.orden || '').slice(0, 60)
     const ocupadas = [...c.tomadas].filter(([, o]) => !(mia && o.id === mia && o.estado === 'pendiente')).map(([id]) => id)
     res.set('Cache-Control', 'no-store')
-    res.json({ ocupadas: [...ocupadas, ...(ev.bloqueadas || [])] })
+    res.json({ ocupadas: [...ocupadas, ...(ev.bloqueadas || []), ...(ev.reservadas || [])] })
   } catch (e) {
     console.error('❌ Error armando la sala:', e?.message || e)
     res.status(500).json({ error: 'No se pudo cargar el plano' })
@@ -1514,10 +1515,15 @@ app.get('/api/admin/sala', requireAuth(['admin', 'organizador', 'venta', 'contro
       const estado = o.estado === 'pendiente' ? 'pagando' : o.metodo === 'cortesia' ? 'cortesia' : 'vendida'
       butacas[id] = veQuien ? { estado, orden: o.id, nombre: o.nombre, metodo: o.metodo, vendedor: o.vendedor, entro: ingresos.has(id) } : { estado }
     }
+    // Las reservadas (invitaciones de la organización) se ven ocupadas, sin nombre ni motivo, y no se cuentan: la sala
+    // de esa función tiene esas butacas menos. Van antes que las guardadas: si una estuviera en las dos, no se nombra.
+    const resv = (ev.reservadas || []).filter(id => !butacas[id])
+    for (const id of resv) butacas[id] = { estado: 'ocupada' }
     for (const id of ev.bloqueadas || []) if (!butacas[id]) butacas[id] = { estado: 'bloqueada' }
-    const cuentas = { libres: SALA.total, vendida: 0, pagando: 0, cortesia: 0, bloqueada: 0 }
-    for (const b of Object.values(butacas)) { cuentas[b.estado]++; cuentas.libres-- }
-    res.json({ evento: ev.id, butacas, cuentas, total: SALA.total })
+    const total = SALA.total - resv.length
+    const cuentas = { libres: total, vendida: 0, pagando: 0, cortesia: 0, bloqueada: 0 }
+    for (const b of Object.values(butacas)) if (b.estado !== 'ocupada') { cuentas[b.estado]++; cuentas.libres-- }
+    res.json({ evento: ev.id, butacas, cuentas, total })
   } catch (e) {
     console.error('❌ Error en la sala del panel:', e?.message || e)
     res.status(500).json({ error: 'No se pudo cargar el plano' })
@@ -1537,7 +1543,8 @@ app.post('/api/admin/sala/bloquear', requireAuth(ORGANIZACION), async (req, res)
       const actuales = new Set(fila.bloqueadas || [])
       if (bloquear) {
         const tomadas = await butacasTomadas(ev.id, { transaction })
-        const ocupadas = lista.filter(b => tomadas.has(b))
+        const resv = new Set(fila.reservadas || [])
+        const ocupadas = lista.filter(b => tomadas.has(b) || resv.has(b))
         if (ocupadas.length) return { error: `No se pueden guardar: ${resumenButacas(SALA, ocupadas)} ya ${ocupadas.length === 1 ? 'está vendida o pagándose' : 'están vendidas o pagándose'}.` }
         lista.forEach(b => actuales.add(b))
       } else lista.forEach(b => actuales.delete(b))

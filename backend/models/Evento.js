@@ -27,6 +27,11 @@ const Evento = sequelize.define('Evento', {
   // Butacas que el organizador se guarda (familia, cámaras, invitados): no salen a la venta.
   // Una cortesía las puede usar. Solo en las galas con sala: ["5-11", "5-12"].
   bloqueadas:  json('bloqueadas'),
+  // Reservadas por la organización para sus invitaciones (Rítmica, 17/11/2026): se ven ocupadas para todos, en la
+  // compra y en el panel, y no se cuentan en ningún lado (ni libres, ni guardadas, ni en el total de la sala). La
+  // escuela pidió que el panel no hiciera referencia a ellas. No salen ni como cortesía: la invitación va por fuera
+  // del sistema (sin QR). El panel no las edita; se cargan con herramientas/reservar-butacas.mjs.
+  reservadas:  json('reservadas'),
   publicado:   { type: DataTypes.BOOLEAN, defaultValue: false },   // se ve en la cartelera
   ventaAbierta:{ type: DataTypes.BOOLEAN, defaultValue: true },    // con publicado, se puede comprar
   ventaHasta:  { type: DataTypes.DATEONLY, allowNull: true },       // último día de venta online (después, solo en puerta)

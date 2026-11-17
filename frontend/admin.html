@@ -715,7 +715,7 @@ async function cargarSala() {
     if (!S_PLANO || S_EV !== EVA) {
       S_EV = EVA; MARCADAS = []; $('#s-quien').hidden = true;
       S_PLANO = Plano.crear($('#s-plano'), { sala: CFG.sala, estado: estadoSala, alTocar: tocarSala,
-        extra: id => { const b = S_DATOS.butacas[id]; return `${Plano.etiqueta(CFG.sala, id)}${b ? ' · ' + (ESTADO_BUTACA[b.estado] || b.estado) + (b.nombre ? ' · ' + b.nombre : '') : ' · libre'}`; } });
+        extra: id => { const b = S_DATOS.butacas[id]; return `${Plano.etiqueta(CFG.sala, id)}${b?.estado === 'ocupada' ? ' · no disponible' : b ? ' · ' + (ESTADO_BUTACA[b.estado] || b.estado) + (b.nombre ? ' · ' + b.nombre : '') : ' · libre'}`; } });
       $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['cortesia', 'Cortesía'], ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
     } else S_PLANO.refrescar();
     const c = S_DATOS.cuentas;
@@ -726,6 +726,7 @@ async function cargarSala() {
 }
 function tocarSala(id) {
   const b = S_DATOS.butacas[id];
+  if (b?.estado === 'ocupada') return;   // reservada por la organización: no se marca ni se explica (ver el modelo Evento)
   if (!b || b.estado === 'bloqueada') {
     if (!VE_TODO()) return;
     MARCADAS = MARCADAS.includes(id) ? MARCADAS.filter(x => x !== id) : [...MARCADAS, id];
