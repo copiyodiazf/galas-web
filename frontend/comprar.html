@@ -238,6 +238,13 @@ const tiposIds = () => Object.keys(EV?.tipos || {});
 const tipoDeButaca = id => Plano.tipoDe(SALA(), tiposIds(), id);
 function avisoSala(msg) { $('#aviso-sala').textContent = msg || ''; }
 function leerMia() {
+  // El botón "Retomar mi compra" del mail trae la compra y sus butacas guardadas: se le muestran elegidas, como suyas.
+  const o = params.get('orden'), bs = String(params.get('butacas') || '').split(',').filter(x => /^[\w]+-\d+$/.test(x));
+  if (o && bs.length && params.get('evento') === EV?.id) {
+    const m = { orden: o.slice(0, 60), evento: EV.id, butacas: bs.slice(0, CFG.maxEntradas) };
+    try { sessionStorage.setItem('gala_compra', JSON.stringify(m)); } catch {}
+    return m;
+  }
   try { const m = JSON.parse(sessionStorage.getItem('gala_compra') || 'null'); return m && m.evento === EV?.id ? m : null; } catch { return null; }
 }
 // ["1","2","3","5"] → "1 a 3 y 5". Las filas con letras quedan como vienen.
@@ -492,7 +499,7 @@ function avisoTransferencia() {
   const texto = `Hola, transferí para las entradas de ${CFG?.sitio?.nombre || 'la gala'} a nombre de ${$('#nombre').value.trim()} y todavía no me llegaron.`;
   $('#ya-transferi').innerHTML = `<b>¿Ya hiciste la transferencia?</b> No la hagas de nuevo. A veces el banco tarda en acreditarla:
     apenas llegue, las entradas te llegan solas a <b>${esc($('#email').value.trim())}</b> (mirá también en spam).${SALA() ? `
-    Si llega cuando tus butacas ya se liberaron, te damos las mejores que queden libres y te lo decimos en el mail.` : ''}
+    Tus butacas siguen guardadas a tu nombre mientras tanto.` : ''}
     Si todavía no transferiste, tocá «Ir a pagar» de nuevo.${wa ? ` Si en una hora no te llegaron,
     <a href="https://wa.me/${encodeURIComponent(wa)}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener">escribinos por WhatsApp</a>.` : ''}`;
   $('#ya-transferi').hidden = false;
@@ -601,9 +608,10 @@ fetch('/api/config').then(r => r.json()).then(c => {
   if (EN_APP) { $('#en-app').hidden = false; $('#en-app-sala').hidden = false; }
   if (c.apartarMinutos) $('#min-apartado').textContent = ` ${c.apartarMinutos} minutos`;
   EV = lista.find(e => e.id === pedidoEvento) || (lista.length === 1 ? lista[0] : null);
-  // Con butacas, una hora para transferir (José, 19/11/2026: en la gala de patín una transferencia tardó casi una hora).
+  // Con butacas, una hora para transferir (José, 19/11/2026: en la gala de patín una transferencia tardó casi una hora),
+  // y si el banco tarda más, las butacas no se sueltan solas: las guarda hasta que la organización revisa el caso.
   $('#reserva').textContent = c.sitio.sala
-    ? `Al tocar «Ir a pagar», tus butacas quedan apartadas ${c.reservaMinutos} minutos para que transfieras. Si el banco tarda más, igual te mandamos las entradas apenas llegue la plata: tus butacas si siguen libres o, si no, las mejores que queden.`
+    ? `Al tocar «Ir a pagar» tenés ${c.reservaMinutos === 60 ? 'una hora' : c.reservaMinutos + ' minutos'} para transferir. Si tu banco tarda más, no transfieras de nuevo: tus butacas siguen guardadas a tu nombre y las entradas te llegan apenas entre la plata.`
     : `Te guardamos el lugar ${c.reservaMinutos} minutos mientras pagás.`;
   pintarFechas(); pintarTipos(); actualizar();
 }).catch(() => error('No pudimos cargar los precios. Revisá tu conexión y recargá la página.'));

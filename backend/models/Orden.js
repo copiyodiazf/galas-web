@@ -29,6 +29,12 @@ const Orden = sequelize.define('Orden', {
   pagador:   { type: DataTypes.STRING, allowNull: true },    // titular de la cuenta que transfirió (lo informa Chytapay)
   pagadaEn:  { type: DataTypes.DATE, allowNull: true },
   avisadoEn: { type: DataTypes.DATE, allowNull: true },      // recordatorio por compra a medio camino
+  // Con butacas, una compra online que venció sin pagar NO suelta sus butacas sola (José, 19/11/2026: un banco que
+  // demora no es culpa del papá): quedan guardadas hasta que la organización las libera desde el panel, o hasta que
+  // la misma persona elige otras. liberadaEn/liberadaPor dicen cuándo y quién ('comprador' si eligió otras). Va en
+  // columnas aparte y no como otro estado: el estado es un ENUM y cambiarlo en una base ya creada pide tocarla a mano.
+  liberadaEn:  { type: DataTypes.DATE, allowNull: true },
+  liberadaPor: { type: DataTypes.STRING(60), allowNull: true },
   // Qué pasó con la pantalla de pago en el celular del comprador: navegador, pasos del checkout y
   // pedidos a Chytapay con su demora. Sin datos personales. Sirve para saber dónde se traba el que no paga.
   traza:     { type: DataTypes.TEXT, allowNull: true },

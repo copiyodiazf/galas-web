@@ -32,6 +32,7 @@
 .bu.vendida{background:#3f9466;border-color:#3f9466;color:#fff;}
 .bu.pagando{background:#d4a03c;border-color:#d4a03c;color:#1d1830;}
 .bu.eligiendo{background:transparent;border:2px dashed #d4a03c;color:#f1d9a8;}
+.bu.retenida{background:#e86a4f;border-color:#e86a4f;color:#fff;}
 .bu.cortesia{background:#7c6cf0;border-color:#7c6cf0;color:#fff;}
 .bu.bloqueada{background:repeating-linear-gradient(45deg,#4b4060,#4b4060 4px,#5e5278 4px,#5e5278 8px);border-color:#8d80aa;color:#fff;}
 .bu.marcada{outline:3px solid #fff;outline-offset:1px;}

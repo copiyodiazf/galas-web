@@ -321,7 +321,7 @@ async function ocupacion(eventoId, transaction) {
     attributes: ['tipo', 'estado', [fn('SUM', col('cantidad')), 'cant']],
     where: {
       evento: eventoId, metodo: { [Op.notIn]: NO_VENTA },
-      [Op.or]: [{ estado: 'pagada' }, { estado: 'pendiente', createdAt: { [Op.gte]: corte } }],
+      [Op.or]: [{ estado: 'pagada' }, { estado: 'pendiente', createdAt: { [Op.gte]: corte } }, ...(usaSala(ev) ? [RETENIDAS] : [])],
     },
     group: ['tipo', 'estado'], raw: true, transaction,
   })
@@ -333,22 +333,31 @@ async function ocupacion(eventoId, transaction) {
   return oc
 }
 
-// Butacas que no se pueden vender: las de compras pagadas (también cortesías y puntos de venta) y las de compras
-// empezadas que todavía están a tiempo de pagarse. Las devueltas y las vencidas quedan libres.
+// RETENIDAS (con butacas, José, 19/11/2026): la compra online que llegó a la pantalla de pago (tiene su cobro: el papá
+// ya recibió el CVU) guarda sus butacas aunque se le venza la hora sin que llegue la transferencia. Un banco que
+// demora no es culpa del papá, y si las butacas se soltaban solas perdía las que eligió. Quedan así hasta que:
+// llega el pago (se emite con esas mismas), la organización revisa el caso y las libera desde el panel, o la misma
+// persona vuelve a comprar y elige otras. Las que nunca llegaron al cobro no guardan nada después de la hora.
+const RETENIDAS = { metodo: 'chytapay', butacas: { [Op.ne]: null }, paymentId: { [Op.ne]: null }, estado: { [Op.in]: ['pendiente', 'abandonada'] }, liberadaEn: null }
+const retenida = o => Boolean(SALA && o.butacas && o.metodo === 'chytapay' && o.paymentId && ['pendiente', 'abandonada'].includes(o.estado) && !o.liberadaEn)
+const aTiempo = (o, corte = new Date(Date.now() - RESERVA_MINUTOS * 60000)) => o.estado === 'pendiente' && new Date(o.createdAt) >= corte
+
+// Butacas que no se pueden vender: las de compras pagadas (también cortesías y puntos de venta), las de compras
+// empezadas que todavía están a tiempo de pagarse y las retenidas. Las devueltas y las liberadas quedan libres.
 // excepto: una compra que no cuenta (la que se está confirmando). deLaPersona: { dni, email } cuyas compras
 // online sin pagar tampoco cuentan (vuelve a elegir: las que tenía se liberan al crear la nueva).
 async function butacasTomadas(eventoId, { transaction, excepto, deLaPersona } = {}) {
   const corte = new Date(Date.now() - RESERVA_MINUTOS * 60 * 1000)
   const filas = await Orden.findAll({
-    attributes: ['id', 'butacas', 'estado', 'metodo', 'nombre', 'dni', 'email', 'vendedor', 'createdAt'],
+    attributes: ['id', 'butacas', 'estado', 'metodo', 'nombre', 'dni', 'email', 'vendedor', 'createdAt', 'paymentId', 'liberadaEn'],
     where: { evento: eventoId, butacas: { [Op.ne]: null }, metodo: { [Op.notIn]: NO_VENTA },
-      [Op.or]: [{ estado: 'pagada' }, { estado: 'pendiente', createdAt: { [Op.gte]: corte } }] },
+      [Op.or]: [{ estado: 'pagada' }, { estado: 'pendiente', createdAt: { [Op.gte]: corte } }, ...(SALA ? [RETENIDAS] : [])] },
     raw: true, transaction,
   })
   const m = new Map()
   for (const o of filas) {
     if (o.id === excepto) continue
-    if (deLaPersona && o.estado === 'pendiente' && o.metodo === 'chytapay' && o.dni === deLaPersona.dni && o.email === deLaPersona.email) continue
+    if (deLaPersona && o.estado !== 'pagada' && o.metodo === 'chytapay' && o.dni === deLaPersona.dni && o.email === deLaPersona.email) continue
     for (const b of butacasDe(o)) m.set(b, o)
   }
   return m
@@ -374,8 +383,9 @@ async function apartarButacas(ev, datos, { cortesia = false, reemplazar = false,
       sala: [...new Set([...tomadas.keys(), ...resv, ...ajenas, ...(cortesia ? [] : bloq)])] }
   }
   if (persona) {
-    const [n] = await Orden.update({ estado: 'abandonada' }, { transaction, where: { evento: ev.id, metodo: 'chytapay', estado: 'pendiente',
-      dni: persona.dni, email: persona.email, butacas: { [Op.ne]: null } } })
+    // También las retenidas: es la misma persona eligiendo otras (si las quería, elegía esas mismas).
+    const [n] = await Orden.update({ estado: 'abandonada', liberadaEn: new Date(), liberadaPor: 'comprador' }, { transaction, where: { evento: ev.id, metodo: 'chytapay',
+      estado: { [Op.in]: ['pendiente', 'abandonada'] }, liberadaEn: null, dni: persona.dni, email: persona.email, butacas: { [Op.ne]: null } } })
     if (n) console.log(`🔁 ${persona.email} volvió a elegir butacas: ${n} compra(s) sin pagar liberada(s)`)
   }
   const usadas = pedidas.filter(b => bloq.has(b))
@@ -514,6 +524,8 @@ const adjuntoLogo = () => existsSync(LOGO_MAIL) ? [{ filename: 'logo.png', path:
 async function enviarMailPendiente(orden) {
   const t = await getTransporter()
   const ev = eventoDe(orden.evento)
+  // Con butacas retenidas, el botón lleva a la compra con esas butacas elegidas como suyas.
+  const guardadas = retenida(orden)
   const ayuda = SITIO.ayudaWhatsapp ? `
         <div style="background:#f4f1f8;border-radius:12px;padding:16px;text-align:center;margin-top:18px;">
           <p style="margin:0 0 10px;font-size:14px;">¿Preferís que te demos una mano?</p>
@@ -530,13 +542,13 @@ async function enviarMailPendiente(orden) {
       ${encabezadoMail(ev)}
       <tr><td style="padding:26px;">
         <p style="font-size:16px;margin:0 0 12px;">Hola ${primerNombre(orden.nombre)}:</p>
-        <p style="font-size:15px;line-height:1.6;margin:0 0 14px;">Empezaste a comprar <b>${cuantasEntradas(orden)}</b> y todavía no nos llegó la transferencia.</p>
+        <p style="font-size:15px;line-height:1.6;margin:0 0 14px;">Empezaste a comprar <b>${cuantasEntradas(orden)}</b> y todavía no nos llegó la transferencia.${guardadas ? ` Tus butacas (<b>${escapeHtml(resumenButacas(SALA, butacasDe(orden)))}</b>) <b>siguen guardadas a tu nombre</b>.` : ''}</p>
         <div style="background:#f4f1f8;border-radius:12px;padding:14px 16px;margin:0 0 14px;">
           <p style="font-size:15px;line-height:1.6;margin:0;"><b>¿Ya transferiste?</b> No lo hagas de nuevo. A veces el banco demora la transferencia: apenas se acredite, te mandamos las entradas a este correo. Si pasa más de una hora y no te llegaron, escribinos y lo ubicamos.</p>
         </div>
-        <p style="font-size:15px;line-height:1.6;margin:0;"><b>¿No llegaste a pagar?</b> Podés retomar la compra. Se paga por transferencia desde la app de tu banco o de tu billetera: <b>transferí desde una cuenta a tu nombre</b>, con el DNI que pusiste en la compra.</p>
+        <p style="font-size:15px;line-height:1.6;margin:0;"><b>¿No llegaste a pagar?</b> Podés retomar la compra${guardadas ? ' con esas mismas butacas (poné el mismo email y DNI)' : ''}. Se paga por transferencia desde la app de tu banco o de tu billetera: <b>transferí desde una cuenta a tu nombre</b>, con el DNI que pusiste en la compra.</p>
         <div style="text-align:center;margin:24px 0 4px;">
-          <a href="${FRONTEND_URL}/comprar?evento=${encodeURIComponent(orden.evento)}" style="${botonMail}font-weight:800;padding:14px 32px;border-radius:30px;display:inline-block;">Retomar mi compra</a>
+          <a href="${FRONTEND_URL}/comprar?evento=${encodeURIComponent(orden.evento)}${guardadas ? `&orden=${encodeURIComponent(orden.id)}&butacas=${encodeURIComponent(orden.butacas)}` : ''}" style="${botonMail}font-weight:800;padding:14px 32px;border-radius:30px;display:inline-block;">Retomar mi compra</a>
         </div>${ayuda}
         <p style="font-size:12px;color:#7d7590;margin:22px 0 0;text-align:center;">Si ya te llegaron las entradas, ignorá este mensaje.</p>
       </td></tr>
@@ -814,8 +826,12 @@ async function emitirTardia(d, fila) {
   const cuil = String(d.payerCuil ?? '').replace(/\D/g, '')
   if (cuil.length !== 11 || cuil.slice(2, 10) !== dni) return false
   if (!(Number(d.amount) + 1 >= Number(orden.total))) return false
-  const oc = await ocupacion(orden.evento)
-  if ((oc[orden.tipo]?.libres ?? 0) < orden.cantidad) return false
+  // Con butacas, el lugar lo mira confirmarYEmitir butaca por butaca (las retenidas son suyas: con el cupo contado
+  // por tipo, en una sala llena parecía que no había lugar ni para ella misma).
+  if (!(SALA && orden.butacas)) {
+    const oc = await ocupacion(orden.evento)
+    if ((oc[orden.tipo]?.libres ?? 0) < orden.cantidad) return false
+  }
   if (!await confirmarYEmitir(orden, { pagador: d.payerName })) return false
   await fila?.update({ emitida: true }).catch(() => {})
   console.log(`✅ Orden ${orden.id}: la transferencia llegó tarde pero es del mismo DNI y por el total → emitida sola`)
@@ -1041,11 +1057,13 @@ const filaOrden = (o, ingresos = {}) => {
     ingresadas: ingresos[o.id] || 0,
   }
 }
-// Cómo se ve una compra en el panel: pagada, pagando ahora (dentro de la reserva), no pagó, devuelta o cortesía.
+// Cómo se ve una compra en el panel: pagada, pagando ahora (dentro de la reserva), vencida con las butacas
+// guardadas (retenida, para revisar), no pagó, devuelta o cortesía.
 function estadoVista(o, corte = new Date(Date.now() - RESERVA_MINUTOS * 60000)) {
   if (o.estado === 'reversada') return 'devuelta'
   if (o.estado === 'pagada') return o.metodo === 'cortesia' ? 'cortesia' : 'pagada'
-  return o.estado === 'pendiente' && new Date(o.createdAt) >= corte ? 'pagando' : 'sinpagar'
+  if (aTiempo(o, corte)) return 'pagando'
+  return retenida(o) ? 'retenida' : 'sinpagar'
 }
 async function ingresosDe(ids) {
   const r = {}
@@ -1079,8 +1097,10 @@ app.get('/api/admin/resumen', requireAuth(ORGANIZACION), async (req, res) => {
       const p = porPrecio[unidad] ??= { precio: unidad, nombre: nombrePrecio[unidad] || null, entradas: 0, cobrado: 0, paraOrganizador: 0 }
       p.entradas += o.cantidad; p.cobrado += o.total; p.paraOrganizador += o.subtotal
     }
-    const intentos = await Orden.count({ where: { evento: ev.id, metodo: 'chytapay', estado: { [Op.in]: ['pendiente', 'abandonada'] },
-      createdAt: { [Op.lt]: new Date(Date.now() - RESERVA_MINUTOS * 60000) } } })
+    // Las que no se pagaron a tiempo: con butacas guardadas (a revisar) o sin nada guardado.
+    const vencidas = await Orden.findAll({ where: { evento: ev.id, metodo: 'chytapay', estado: { [Op.in]: ['pendiente', 'abandonada'] },
+      createdAt: { [Op.lt]: new Date(Date.now() - RESERVA_MINUTOS * 60000) } }, attributes: ['estado', 'metodo', 'butacas', 'paymentId', 'liberadaEn', 'createdAt'], raw: true })
+    const retenidas = vencidas.filter(retenida).length, intentos = vencidas.length - retenidas
     const online = await Orden.findOne({ where: { ...pagadas, metodo: 'chytapay' }, raw: true,
       attributes: [[fn('COUNT', col('id')), 'operaciones'], [fn('SUM', col('cantidad')), 'entradas'], [fn('SUM', col('total')), 'importe']] })
     const porPuntoFilas = await Orden.findAll({ where: { ...pagadas, metodo: 'punto' }, raw: true, group: ['vendedor'],
@@ -1096,7 +1116,7 @@ app.get('/api/admin/resumen', requireAuth(ORGANIZACION), async (req, res) => {
       eventos: lista,
       evento: { id: ev.id, nombre: ev.nombre, cuando: cuandoDe(ev), publicado: Boolean(Number(ev.publicado)), ventaAbierta: vendibleOnline(ev) },
       tipos: Object.fromEntries(Object.entries(oc).map(([k, t]) => [k, { ...t, nombre: tipoDe(ev, k)?.nombre || k, ingresaron: ingresosPorTipo[k] || 0, sinTope: t.cupo >= SIN_TOPE }])),
-      cortesias, pendientes, sinImputar, intentos,
+      cortesias, pendientes, sinImputar, intentos, retenidas,
       ordenes: Number(totales?.ordenes || 0), entradas: Number(totales?.entradas || 0),
       recaudado: Number(totales?.recaudado || 0), cobrado: Number(totales?.cobrado || 0), cargo: Number(totales?.cargo || 0),
       porDia: Object.values(porDia).sort((a, b) => b.dia.localeCompare(a.dia)),
@@ -1122,7 +1142,7 @@ app.get('/api/admin/operaciones', requireAuth(ORGANIZACION), async (req, res) =>
     const filtro = String(req.query.estado || 'pagada')
     const todas = await Orden.findAll({ where: { evento: ev.id, metodo: { [Op.notIn]: NO_VENTA } }, order: [['createdAt', 'DESC']], limit: 3000 })
     const corte = new Date(Date.now() - RESERVA_MINUTOS * 60000)
-    const cuentas = { pagada: 0, pagando: 0, sinpagar: 0, devuelta: 0, cortesia: 0 }
+    const cuentas = { pagada: 0, pagando: 0, retenida: 0, sinpagar: 0, devuelta: 0, cortesia: 0 }
     const elegidas = []
     for (const o of todas) {
       const e = estadoVista(o, corte)
@@ -1522,7 +1542,7 @@ const sinCacheSala = id => { _salaCache.delete(id); _salaGen.set(id, (_salaGen.g
 // le quedan para ir a pagar. orden = su compra sin pagar: esas butacas le salen libres.
 async function salaPara(ev, { cliente = null, orden = '' } = {}) {
   const tomadas = await tomadasEnCache(ev.id)
-  const ocupadas = [...tomadas].filter(([, o]) => !(orden && o.id === orden && o.estado === 'pendiente')).map(([id]) => id)
+  const ocupadas = [...tomadas].filter(([, o]) => !(orden && o.id === orden && o.estado !== 'pagada')).map(([id]) => id)
   const mia = APARTADAS.de(ev.id, cliente)
   return {
     ocupadas: [...new Set([...ocupadas, ...(ev.bloqueadas || []), ...(ev.reservadas || []), ...APARTADAS.deOtros(ev.id, cliente)])],
@@ -1560,7 +1580,7 @@ app.post('/api/sala/apartar', rateLimit({ windowMs: 60000, max: TOQUES_IP_MINUTO
     const tomadas = await tomadasEnCache(ev.id)
     // Desde acá hasta apartarla no hay ningún await: nadie más puede tocarla en el medio.
     const t = tomadas.get(butaca)
-    const vendida = t && !(orden && t.id === orden && t.estado === 'pendiente')
+    const vendida = t && !(orden && t.id === orden && t.estado !== 'pagada')
     const r = vendida || (ev.bloqueadas || []).includes(butaca) || (ev.reservadas || []).includes(butaca) ? { error: 'ocupada' }
       : APARTADAS.apartar(ev.id, cliente, butaca, ipDe(req))
     if (r.error === 'tope_ip') return res.status(429).json({ error: 'Hay demasiadas butacas apartadas desde esta conexión. Probá en unos minutos o con otra conexión (wifi o datos).' })
@@ -1590,7 +1610,7 @@ app.get('/api/admin/sala', requireAuth(['admin', 'organizador', 'venta', 'contro
     const ingresos = veQuien ? new Set((await Entrada.findAll({ where: { evento: ev.id, usado: true, butaca: { [Op.ne]: null } }, attributes: ['butaca'], raw: true })).map(e => e.butaca)) : new Set()
     const butacas = {}
     for (const [id, o] of tomadas) {
-      const estado = o.estado === 'pendiente' ? 'pagando' : o.metodo === 'cortesia' ? 'cortesia' : 'vendida'
+      const estado = o.estado === 'pagada' ? (o.metodo === 'cortesia' ? 'cortesia' : 'vendida') : aTiempo(o) ? 'pagando' : 'retenida'
       butacas[id] = veQuien ? { estado, orden: o.id, nombre: o.nombre, metodo: o.metodo, vendedor: o.vendedor, entro: ingresos.has(id) } : { estado }
     }
     // Las reservadas (invitaciones de la organización) se ven ocupadas, sin nombre ni motivo, y no se cuentan: la sala
@@ -1601,12 +1621,41 @@ app.get('/api/admin/sala', requireAuth(['admin', 'organizador', 'venta', 'contro
     // Las que alguien tocó en la web y todavía no fue a pagar: ni la boletería ni las cortesías pueden usarlas.
     for (const id of APARTADAS.todas(ev.id)) if (!butacas[id]) butacas[id] = { estado: 'eligiendo' }
     const total = SALA.total - resv.length
-    const cuentas = { libres: total, vendida: 0, pagando: 0, eligiendo: 0, cortesia: 0, bloqueada: 0 }
+    const cuentas = { libres: total, vendida: 0, pagando: 0, retenida: 0, eligiendo: 0, cortesia: 0, bloqueada: 0 }
     for (const b of Object.values(butacas)) if (b.estado !== 'ocupada') { cuentas[b.estado]++; cuentas.libres-- }
     res.json({ evento: ev.id, butacas, cuentas, total })
   } catch (e) {
     console.error('❌ Error en la sala del panel:', e?.message || e)
     res.status(500).json({ error: 'No se pudo cargar el plano' })
+  }
+})
+
+// Liberar las butacas de una compra vencida sin pago (retenida): la organización revisó el caso y decide soltarlas.
+// Antes se pregunta a Chytapay si la plata entró (si entró, se emite en vez de liberar) y se mira que no haya una
+// transferencia de esta compra esperando en "sin asignar". Si el pago llega después de liberarlas, se emite igual:
+// con esas butacas si siguen libres o con las mejores que queden.
+app.post('/api/admin/orden/:id/liberar', requireAuth(ORGANIZACION), async (req, res) => {
+  try {
+    const orden = await Orden.findByPk(String(req.params.id))
+    if (!orden || !retenida(orden)) return res.status(404).json({ error: 'Esa compra no tiene butacas guardadas para liberar.' })
+    if (aTiempo(orden)) return res.status(409).json({ error: 'Todavía está dentro de la hora para transferir: esperá a que venza.' })
+    if (await SinImputar.count({ where: { orden_id: orden.id, resuelto: false } }))
+      return res.status(409).json({ error: 'Llegó una transferencia de esta compra que no se pudo asignar sola: revisala en Herramientas → "Transferencias sin asignar" antes de liberar.' })
+    let pagada
+    try { pagada = await verificarYEmitir(orden) } catch (e) {
+      console.error(`⚠️ Liberar ${orden.id}: Chytapay no contestó:`, e?.message || e)
+      return res.status(503).json({ error: 'No pudimos preguntarle a Chytapay si esta compra se pagó. Probá de nuevo en un rato.' })
+    }
+    if (pagada) return res.json({ ok: true, emitida: true })
+    const [n] = await Orden.update({ estado: 'abandonada', liberadaEn: new Date(), liberadaPor: String(req.usuario.usuario).slice(0, 60) },
+      { where: { id: orden.id, estado: { [Op.in]: ['pendiente', 'abandonada'] }, liberadaEn: null } })
+    if (!n) return res.status(409).json({ error: 'La compra cambió recién (¿se pagó?). Actualizá la pantalla.' })
+    sinCacheSala(orden.evento)
+    console.log(`🔓 Butacas liberadas (${orden.butacas}) de la compra ${orden.id} por ${req.usuario.usuario}`)
+    res.json({ ok: true, butacas: resumenButacas(SALA, butacasDe(orden)) })
+  } catch (e) {
+    console.error('❌ Error liberando butacas:', e?.message || e)
+    res.status(500).json({ error: 'No se pudieron liberar las butacas' })
   }
 })
 

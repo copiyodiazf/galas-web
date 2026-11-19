@@ -42,6 +42,7 @@
 .filtros button b{margin-left:6px;opacity:.7;}
 .dia-barra{height:8px;border-radius:99px;background:var(--oro);min-width:3px;}
 .etq.pagando{background:rgba(231,194,125,.35);}
+.etq.retenida{background:rgba(232,106,79,.45);}
 .noche{background:rgba(246,240,230,.05);border:1px solid rgba(246,240,230,.12);border-radius:16px;padding:16px;}
 .noche h3{font-family:var(--f-display);font-weight:700;font-size:22px;}
 .barra-cupo{height:12px;border-radius:999px;background:rgba(246,240,230,.1);overflow:hidden;margin:10px 0 6px;display:flex;}
@@ -443,13 +444,14 @@ async function cargarResumen() {
       return `<div class="noche"><h3>${esc(n.nombre)}</h3>
         <div class="barra-cupo"><i style="width:${v}%;background:var(--oro)"></i><i style="width:${r}%;background:rgba(231,194,125,.4)"></i></div>
         <p style="font-size:14px;"><b style="font-size:20px">${n.vendidas.toLocaleString('es-AR')}</b> de ${n.cupo.toLocaleString('es-AR')} vendidas · <b>${n.libres.toLocaleString('es-AR')}</b> libres</p>
-        <p class="ayuda">${n.reservadas} pagando ahora · ingresaron ${n.ingresaron.toLocaleString('es-AR')}</p></div>`;
+        <p class="ayuda">${n.reservadas} ${CFG?.sala ? 'sin pagar todavía (pagándose o vencidas con la butaca guardada)' : 'pagando ahora'} · ingresaron ${n.ingresaron.toLocaleString('es-AR')}</p></div>`;
     }).join('') || '<p class="ayuda">Esta fecha todavía no tiene entradas cargadas (Cartelera → Editar).</p>';
     const cifra = ([b, s, clase = '', ir = '']) => `<div class="cifra ${clase}"${ir ? ` style="cursor:pointer" onclick="${ir}"` : ''}><b>${b}</b><span>${s}</span></div>`;
     $('#r-cifras').innerHTML = [
       [d.entradas.toLocaleString('es-AR'), 'Entradas vendidas', 'fuerte'], [d.ordenes, 'Compras'],
       [pesos(d.cobrado), 'Cobrado (lo que pagó el público)'], [pesos(d.recaudado), `${ORG} (sin el servicio)`, 'fuerte'],
       [d.pendientes, 'Compras pagando ahora', '', "abrirOperaciones('pagando')"],
+      ...(d.retenidas ? [[d.retenidas, 'Vencidas con butacas guardadas: revisar', 'alerta', "abrirOperaciones('retenida')"]] : []),
       ...(d.intentos ? [[d.intentos, 'Compras que no se pagaron: ver', '', "abrirOperaciones('sinpagar')"]] : []),
       ...(d.cortesias ? [[d.cortesias, 'Cortesías']] : []),
       [d.visitas.hoy + ' / ' + d.visitas.total, 'Visitas a la página hoy / total'],
@@ -471,7 +473,7 @@ async function cargarResumen() {
   } catch (x) { alert(x.message); }
 }
 // Estado de una compra en la lista (las de la búsqueda vienen sin estadoVista: son pagadas o devueltas).
-const ESTADOS = { pagada: ['pagada', 'ok'], pagando: ['pagando ahora', 'pagando'], sinpagar: ['no pagó', 'no'], devuelta: ['devuelta', 'no'], cortesia: ['cortesía', ''] };
+const ESTADOS = { pagada: ['pagada', 'ok'], pagando: ['pagando ahora', 'pagando'], retenida: ['venció · butacas guardadas', 'retenida'], sinpagar: ['no pagó', 'no'], devuelta: ['devuelta', 'no'], cortesia: ['cortesía', ''] };
 const estadoDe = o => o.estadoVista || (o.estado === 'reversada' ? 'devuelta' : o.metodo === 'cortesia' ? 'cortesia' : 'pagada');
 function pintarVentas(lista, titulo) {
   $('#ventas-titulo').textContent = titulo;
@@ -491,7 +493,7 @@ function pintarVentas(lista, titulo) {
 }
 // Operaciones de la fecha elegida, filtradas por estado (con la cantidad de cada uno en los botones).
 let FILTRO = 'pagada';
-const FILTROS = [['pagada', 'Pagadas'], ['pagando', 'Pagando ahora'], ['sinpagar', 'No pagaron'], ['devuelta', 'Devueltas'], ['cortesia', 'Cortesías'], ['todas', 'Todas']];
+const FILTROS = [['pagada', 'Pagadas'], ['pagando', 'Pagando ahora'], ['retenida', 'Vencidas con butacas'], ['sinpagar', 'No pagaron'], ['devuelta', 'Devueltas'], ['cortesia', 'Cortesías'], ['todas', 'Todas']];
 async function cargarOperaciones() {
   if (!EVA) return;
   try {
@@ -499,7 +501,8 @@ async function cargarOperaciones() {
     const total = Object.values(d.cuentas).reduce((a, b) => a + b, 0);
     $('#v-filtros').innerHTML = FILTROS.filter(([k]) => k === FILTRO || k === 'todas' || k === 'pagada' || d.cuentas[k])
       .map(([k, t]) => `<button class="${k === FILTRO ? 'activa' : ''}" onclick="abrirOperaciones('${k}')">${t}<b>${k === 'todas' ? total : d.cuentas[k]}</b></button>`).join('');
-    const ayuda = { sinpagar: ' · empezaron la compra y no transfirieron (o transfirieron tarde: mirá "Transferencias sin asignar")', pagando: ' · tienen el CVU y todavía están a tiempo de transferir' }[FILTRO] || '';
+    const ayuda = { sinpagar: ' · empezaron la compra y no transfirieron (o transfirieron tarde: mirá "Transferencias sin asignar")', pagando: ' · tienen el CVU y todavía están a tiempo de transferir',
+      retenida: ' · pasó la hora y no llegó la transferencia: sus butacas siguen guardadas hasta que las liberes (tocá la compra)' }[FILTRO] || '';
     pintarVentas(d.ordenes, `${d.ordenes.length} ${FILTROS.find(f => f[0] === FILTRO)[1].toLowerCase()}${ayuda}`);
   } catch (x) { alert(x.message); }
 }
@@ -523,8 +526,12 @@ async function verOrden(i) {
   if (!pagada) {
     $('#mq-tit').textContent = `${o.nombre} · ${o.cantidad} entrada${o.cantidad > 1 ? 's' : ''} · ${pesos(o.total)}`;
     $('#mq-sub').textContent = `${ESTADOS[estadoDe(o)][0]} · empezó la compra el ${fecha(o.creada || o.fecha)} · DNI ${o.dni || '—'}`;
-    $('#mq-qrs').innerHTML = `<p class="ayuda" style="text-align:left">${estadoDe(o) === 'pagando' ? 'Todavía está a tiempo de transferir: si paga, la entrada sale sola.' : 'No llegó a pagar dentro de la reserva. Si dice que transfirió, buscalo en "Transferencias sin asignar".'}</p>
-      <p style="margin-top:10px;text-align:left"><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></p>`;
+    const e = estadoDe(o);
+    $('#mq-qrs').innerHTML = `<p class="ayuda" style="text-align:left">${e === 'pagando' ? 'Todavía está a tiempo de transferir: si paga, la entrada sale sola.'
+      : e === 'retenida' ? `Pasó la hora y no llegó la transferencia. Sus butacas (<b>${esc(o.butacas || '')}</b>) siguen guardadas a su nombre: si la plata entra, la entrada sale sola con esas mismas. Si ya hablaste con la familia y no va a pagar, liberalas. Antes mirá "Transferencias sin asignar" (Herramientas) por si pagó desde otra cuenta.`
+      : 'No llegó a pagar dentro de la reserva. Si dice que transfirió, buscalo en "Transferencias sin asignar".'}</p>
+      <p style="margin-top:10px;text-align:left"><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></p>
+      ${e === 'retenida' && VE_TODO() ? `<p style="margin-top:12px;text-align:left"><button class="chico" onclick="liberarOrden('${esc(o.id)}')">Liberar sus butacas</button></p>` : ''}`;
     $('#m-qr').classList.add('abierto');
     return;
   }
@@ -701,7 +708,7 @@ async function cargarMisVentas() {
 
 // ── Sala (butacas numeradas): el plano con lo vendido, guardar butacas y cortesías con butaca ──
 let S_PLANO = null, S_EV = null, S_DATOS = { butacas: {} }, MARCADAS = [];
-const ESTADO_BUTACA = { vendida: 'Vendida', pagando: 'Pagándose ahora (todavía puede vencer)', eligiendo: 'La está eligiendo alguien en la web (todavía no fue a pagar)', cortesia: 'Cortesía', bloqueada: 'Guardada' };
+const ESTADO_BUTACA = { vendida: 'Vendida', pagando: 'Pagándose ahora (dentro de la hora para transferir)', retenida: 'Venció sin pagar: guardada hasta que la liberes', eligiendo: 'La está eligiendo alguien en la web (todavía no fue a pagar)', cortesia: 'Cortesía', bloqueada: 'Guardada' };
 function estadoSala(id) {
   const b = S_DATOS.butacas[id], c = [b ? b.estado : 'libre'];
   if (MARCADAS.includes(id)) c.push('marcada');
@@ -716,10 +723,11 @@ async function cargarSala() {
       S_EV = EVA; MARCADAS = []; $('#s-quien').hidden = true;
       S_PLANO = Plano.crear($('#s-plano'), { sala: CFG.sala, estado: estadoSala, alTocar: tocarSala,
         extra: id => { const b = S_DATOS.butacas[id]; return `${Plano.etiqueta(CFG.sala, id)}${b?.estado === 'ocupada' ? ' · no disponible' : b ? ' · ' + (ESTADO_BUTACA[b.estado] || b.estado) + (b.nombre ? ' · ' + b.nombre : '') : ' · libre'}`; } });
-      $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['eligiendo', 'Eligiéndose en la web'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['cortesia', 'Cortesía'], ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
+      $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['eligiendo', 'Eligiéndose en la web'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['retenida', 'Venció sin pagar'], ['cortesia', 'Cortesía'], ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
     } else S_PLANO.refrescar();
     const c = S_DATOS.cuentas;
-    $('#s-cifras').innerHTML = [[c.libres, 'Libres'], [c.eligiendo || 0, 'Eligiéndose en la web'], [c.vendida, 'Vendidas'], [c.pagando, 'Pagándose ahora'], [c.cortesia, 'Cortesías'], [c.bloqueada, 'Guardadas'], [S_DATOS.total, 'Butacas de la sala']]
+    $('#s-cifras').innerHTML = [[c.libres, 'Libres'], [c.eligiendo || 0, 'Eligiéndose en la web'], [c.vendida, 'Vendidas'], [c.pagando, 'Pagándose ahora'],
+      ...(c.retenida ? [[c.retenida, 'Vencidas sin pagar (guardadas)']] : []), [c.cortesia, 'Cortesías'], [c.bloqueada, 'Guardadas'], [S_DATOS.total, 'Butacas de la sala']]
       .map(([b, s]) => `<div class="cifra"><b>${b}</b><span>${s}</span></div>`).join('');
     pintarMarcadas();
   } catch (x) { alert(x.message); }
@@ -737,7 +745,20 @@ function tocarSala(id) {
   const q = $('#s-quien'); q.hidden = false;
   const como = b.metodo === 'punto' ? ` · vendida en ${b.vendedor}` : b.metodo === 'cortesia' ? ` · la dio ${b.vendedor || 'la organización'}` : b.metodo === 'chytapay' ? ' · online' : '';
   q.innerHTML = `<b>${esc(Plano.etiqueta(CFG.sala, id))}</b> · ${esc(ESTADO_BUTACA[b.estado] || b.estado)}${b.nombre ? ` · <b>${esc(b.nombre)}</b>` : ''}${esc(como)}${b.entro ? ' · <span class="ok-msg">ya entró</span>' : ''}
-    ${b.orden && b.estado !== 'pagando' && VE_TODO() ? ` <button class="chico" style="margin-left:8px" onclick="verCompraSala('${esc(b.orden)}')">Ver la compra</button>` : ''}`;
+    ${b.orden && b.estado === 'retenida' && VE_TODO() ? ` <button class="chico" style="margin-left:8px" onclick="liberarOrden('${esc(b.orden)}')">Liberar sus butacas</button>`
+      : b.orden && b.estado !== 'pagando' && VE_TODO() ? ` <button class="chico" style="margin-left:8px" onclick="verCompraSala('${esc(b.orden)}')">Ver la compra</button>` : ''}`;
+}
+// Una compra vencida con las butacas guardadas: la organización revisó el caso y las suelta (el servidor antes
+// pregunta a Chytapay si se pagó y mira que no haya una transferencia suya sin asignar).
+async function liberarOrden(id) {
+  if (!confirm('¿Liberar las butacas de esta compra? Vuelven a la venta para cualquiera. Si después llega su transferencia, la entrada sale igual: con esas butacas si siguen libres o con las mejores que queden.')) return;
+  try {
+    const d = await api(`/api/admin/orden/${encodeURIComponent(id)}/liberar`, { method: 'POST' });
+    alert(d.emitida ? 'La transferencia ya había llegado: se emitieron sus entradas (no se liberó nada).' : `Liberadas: ${d.butacas}. Ya están a la venta.`);
+    cerrarModal('m-qr'); $('#s-quien').hidden = true;
+    if (PEST === 'ventas') cargarOperaciones();
+    if (S_PLANO) cargarSala();
+  } catch (x) { alert(x.message); }
 }
 function verCompraSala(orden) {
   const b = Object.values(S_DATOS.butacas).find(x => x.orden === orden);
