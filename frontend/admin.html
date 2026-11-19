@@ -436,14 +436,16 @@ async function cargarResumen() {
     const ORG = S.rol === 'organizador' ? 'Para vos' : 'Para el organizador';
     $$('.col-org').forEach(th => th.textContent = ORG);
     $('#r-tipos').innerHTML = Object.entries(d.tipos).map(([k, n]) => {
-      const v = n.vendidas / n.cupo * 100, r = n.reservadas / n.cupo * 100;
+      // Las cortesías ocupan lugar pero no son venta: van aparte, en violeta (como en el plano).
+      const cort = n.cortesias || 0, v = n.vendidas / n.cupo * 100, c = cort / n.cupo * 100, r = n.reservadas / n.cupo * 100;
+      const deCortesia = cort ? ` · <b>${cort.toLocaleString('es-AR')}</b> de cortesía` : '';
       // Sin tope de venta: ni barra ni "libres" (serían 99.000 y pico).
       if (n.sinTope) return `<div class="noche"><h3>${esc(n.nombre)}</h3>
-        <p style="font-size:14px;margin-top:6px;"><b style="font-size:26px">${n.vendidas.toLocaleString('es-AR')}</b> vendidas · sin tope de venta</p>
+        <p style="font-size:14px;margin-top:6px;"><b style="font-size:26px">${n.vendidas.toLocaleString('es-AR')}</b> vendidas${deCortesia} · sin tope de venta</p>
         <p class="ayuda">${n.reservadas} entrada${n.reservadas === 1 ? '' : 's'} en proceso de pago · ingresaron ${n.ingresaron.toLocaleString('es-AR')}</p></div>`;
       return `<div class="noche"><h3>${esc(n.nombre)}</h3>
-        <div class="barra-cupo"><i style="width:${v}%;background:var(--oro)"></i><i style="width:${r}%;background:rgba(231,194,125,.4)"></i></div>
-        <p style="font-size:14px;"><b style="font-size:20px">${n.vendidas.toLocaleString('es-AR')}</b> de ${n.cupo.toLocaleString('es-AR')} vendidas · <b>${n.libres.toLocaleString('es-AR')}</b> libres</p>
+        <div class="barra-cupo"><i style="width:${v}%;background:var(--oro)"></i><i style="width:${c}%;background:#7c6cf0"></i><i style="width:${r}%;background:rgba(231,194,125,.4)"></i></div>
+        <p style="font-size:14px;"><b style="font-size:20px">${n.vendidas.toLocaleString('es-AR')}</b> de ${n.cupo.toLocaleString('es-AR')} vendidas${deCortesia} · <b>${n.libres.toLocaleString('es-AR')}</b> libres</p>
         <p class="ayuda">${n.reservadas} ${CFG?.sala ? 'sin pagar todavía (pagándose o vencidas con la butaca guardada)' : 'pagando ahora'} · ingresaron ${n.ingresaron.toLocaleString('es-AR')}</p></div>`;
     }).join('') || '<p class="ayuda">Esta fecha todavía no tiene entradas cargadas (Cartelera → Editar).</p>';
     const cifra = ([b, s, clase = '', ir = '']) => `<div class="cifra ${clase}"${ir ? ` style="cursor:pointer" onclick="${ir}"` : ''}><b>${b}</b><span>${s}</span></div>`;
@@ -565,7 +567,7 @@ async function cargarCartelera() {
       <td>${e.imagen ? `<img class="mini-foto" style="width:44px;height:55px" src="${esc(e.imagen)}" alt="">` : ''}</td>
       <td>${esc(e.cuando)}${e.hora ? '' : ' · <span class="ayuda">hora a confirmar</span>'}</td><td><b>${esc(e.nombre)}</b>${e.artistas?.length ? `<br><span class="ayuda">${esc(e.artistas.join(', '))}</span>` : ''}</td>
       <td>${e.pasado ? '<span class="etq">pasada</span>' : `${e.publicado ? '<span class="etq ok">publicada</span>' : '<span class="etq no">oculta</span>'} ${e.externoUrl || e.externoPrecio || e.externoTexto ? '<span class="etq">otra ticketera</span>' : e.vendible ? '<span class="etq ok">a la venta</span>' : `<span class="etq no">${e.tipos.length ? 'venta cerrada' : 'sin precio'}</span>`}`}</td>
-      <td class="n">${e.vendidas}</td><td class="n">${pesos(e.recaudado)}</td>
+      <td class="n">${e.vendidas}${e.cortesias ? `<br><span class="ayuda">+ ${e.cortesias} de cortesía</span>` : ''}</td><td class="n">${pesos(e.recaudado)}</td>
       <td><button class="chico" onclick="editarEvento(${i})">Editar</button></td></tr>`).join('')
       || '<tr><td colspan="7" class="ayuda">Todavía no hay fechas. Tocá "+ Nueva fecha".</td></tr>';
   } catch (x) { alert(x.message); }
@@ -592,7 +594,7 @@ function editarEvento(i) {
   $('#ev-tipos').innerHTML = ''; (e?.tipos || []).forEach(t => filaTipo(t)); if (!e?.tipos?.length) filaTipo();
   $('#ev-pub').checked = e ? Boolean(Number(e.publicado)) : true; $('#ev-venta').checked = e ? Boolean(Number(e.ventaAbierta)) : true;
   $('#ev-foto').value = ''; $('#ev-foto-vista').hidden = !e?.imagen; if (e?.imagen) $('#ev-foto-vista').src = e.imagen;
-  $('#ev-borrar').hidden = !e || e.vendidas > 0;
+  $('#ev-borrar').hidden = !e || e.vendidas + (e.cortesias || 0) > 0;
   $('#ev-err').style.display = 'none';
   $('#m-ev').classList.add('abierto');
 }

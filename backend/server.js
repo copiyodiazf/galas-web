@@ -318,18 +318,19 @@ async function ocupacion(eventoId, transaction) {
   const ev = eventoDe(eventoId)
   const corte = new Date(Date.now() - RESERVA_MINUTOS * 60 * 1000)
   const filas = await Orden.findAll({
-    attributes: ['tipo', 'estado', [fn('SUM', col('cantidad')), 'cant']],
+    attributes: ['tipo', 'estado', 'metodo', [fn('SUM', col('cantidad')), 'cant']],
     where: {
       evento: eventoId, metodo: { [Op.notIn]: NO_VENTA },
       [Op.or]: [{ estado: 'pagada' }, { estado: 'pendiente', createdAt: { [Op.gte]: corte } }, ...(usaSala(ev) ? [RETENIDAS] : [])],
     },
-    group: ['tipo', 'estado'], raw: true, transaction,
+    group: ['tipo', 'estado', 'metodo'], raw: true, transaction,
   })
   // Con sala, la capacidad de cada tipo son sus butacas (sin las que se guardó el organizador), no el cupo cargado.
   const deSala = usaSala(ev) ? cupoDeSala(SALA, ev) : null
-  const oc = Object.fromEntries((ev?.tipos || []).map(t => [t.id, { vendidas: 0, reservadas: 0, cupo: deSala ? (deSala[t.id] || 0) : t.cupo, libres: 0 }]))
-  for (const f of filas) if (oc[f.tipo]) oc[f.tipo][f.estado === 'pagada' ? 'vendidas' : 'reservadas'] += Number(f.cant)
-  for (const t of Object.values(oc)) t.libres = Math.max(0, t.cupo - t.vendidas - t.reservadas)
+  // Las cortesías ocupan lugar pero NO son venta (José, 19/11/2026): van aparte de las vendidas.
+  const oc = Object.fromEntries((ev?.tipos || []).map(t => [t.id, { vendidas: 0, cortesias: 0, reservadas: 0, cupo: deSala ? (deSala[t.id] || 0) : t.cupo, libres: 0 }]))
+  for (const f of filas) if (oc[f.tipo]) oc[f.tipo][f.estado !== 'pagada' ? 'reservadas' : f.metodo === 'cortesia' ? 'cortesias' : 'vendidas'] += Number(f.cant)
+  for (const t of Object.values(oc)) t.libres = Math.max(0, t.cupo - t.vendidas - t.cortesias - t.reservadas)
   return oc
 }
 
@@ -1192,11 +1193,16 @@ app.get('/api/admin/exportar', requireAuth(ORGANIZACION), async (req, res) => {
 })
 
 // ── Cartelera: el organizador y el admin cargan y editan los eventos ──
+// Las cortesías van aparte: no son venta (José, 19/11/2026).
 async function vendidasPorEvento() {
-  const filas = await Orden.findAll({ where: { estado: 'pagada', metodo: { [Op.notIn]: NO_VENTA } }, raw: true, group: ['evento', 'tipo'],
-    attributes: ['evento', 'tipo', [fn('SUM', col('cantidad')), 'cant'], [fn('SUM', col('subtotal')), 'recaudado']] })
+  const filas = await Orden.findAll({ where: { estado: 'pagada', metodo: { [Op.notIn]: NO_VENTA } }, raw: true, group: ['evento', 'tipo', 'metodo'],
+    attributes: ['evento', 'tipo', 'metodo', [fn('SUM', col('cantidad')), 'cant'], [fn('SUM', col('subtotal')), 'recaudado']] })
   const r = {}
-  for (const f of filas) { const e = r[f.evento] || (r[f.evento] = { entradas: 0, recaudado: 0, porTipo: {} }); e.entradas += Number(f.cant); e.recaudado += Number(f.recaudado || 0); e.porTipo[f.tipo] = Number(f.cant) }
+  for (const f of filas) {
+    const e = r[f.evento] || (r[f.evento] = { entradas: 0, cortesias: 0, recaudado: 0, porTipo: {} })
+    if (f.metodo === 'cortesia') { e.cortesias += Number(f.cant); continue }
+    e.entradas += Number(f.cant); e.recaudado += Number(f.recaudado || 0); e.porTipo[f.tipo] = (e.porTipo[f.tipo] || 0) + Number(f.cant)
+  }
   return r
 }
 app.get('/api/admin/eventos', requireAuth(ORGANIZACION), async (_req, res) => {
@@ -1204,7 +1210,7 @@ app.get('/api/admin/eventos', requireAuth(ORGANIZACION), async (_req, res) => {
     const v = await vendidasPorEvento()
     // Las reservadas no viajan al panel (ver el modelo Evento).
     res.json({ eventos: [...EVENTOS.values()].map(({ reservadas: _r, ...e }) => ({ ...e, cuando: cuandoDe(e), pasado: !noPaso(e), vendible: vendibleOnline(e),
-      vendidas: v[e.id]?.entradas || 0, recaudado: v[e.id]?.recaudado || 0, porTipo: v[e.id]?.porTipo || {} })) })
+      vendidas: v[e.id]?.entradas || 0, cortesias: v[e.id]?.cortesias || 0, recaudado: v[e.id]?.recaudado || 0, porTipo: v[e.id]?.porTipo || {} })) })
   } catch (e) {
     console.error('❌ Error listando eventos:', e?.message || e)
     res.status(500).json({ error: 'No se pudo armar la cartelera' })
@@ -1238,9 +1244,9 @@ app.put('/api/admin/eventos/:id', requireAuth(ORGANIZACION), async (req, res) =>
     const oc = await ocupacion(actual.id)
     for (const [tipo, t] of Object.entries(oc)) {
       const nuevo = r.evento.tipos.find(x => x.id === tipo)
-      const usadas = t.vendidas + t.reservadas
+      const usadas = t.vendidas + t.cortesias + t.reservadas
       if (!nuevo && usadas > 0) return res.status(400).json({ error: `"${tipoDe(actual, tipo)?.nombre}" ya tiene ${usadas} entradas: no se puede sacar` })
-      if (nuevo && nuevo.cupo < usadas && !usaSala(actual)) return res.status(400).json({ error: `"${nuevo.nombre}": la capacidad no puede ser menor que las ${usadas} ya vendidas o reservadas` })
+      if (nuevo && nuevo.cupo < usadas && !usaSala(actual)) return res.status(400).json({ error: `"${nuevo.nombre}": la capacidad no puede ser menor que las ${usadas} ya vendidas, de cortesía o reservadas` })
     }
     // Por la instancia (no Evento.update) para que artistas y tipos pasen por el setter que los guarda como JSON.
     const fila = await Evento.findByPk(actual.id)
