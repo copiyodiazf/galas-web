@@ -24,9 +24,14 @@
 .pf.zona .bu.libre{border-color:#5fd38d;color:#c9f5da;}
 .bu.elegida{background:var(--oro);border-color:var(--oro);color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.65);}
 .bu.ocupada{background:rgba(255,255,255,.12);border-color:transparent;color:transparent;cursor:not-allowed;}
+/* Tocada y esperando que el servidor diga si es suya (en la apertura de la venta, otro la pudo tocar antes). */
+.bu.apartando{background:transparent;border-color:var(--oro);color:var(--oro);animation:bu-late .7s ease-in-out infinite alternate;}
+@keyframes bu-late{to{background:rgba(231,194,125,.35);}}
+@media (prefers-reduced-motion:reduce){.bu.apartando{animation:none;background:rgba(231,194,125,.25);}}
 /* En el panel */
 .bu.vendida{background:#3f9466;border-color:#3f9466;color:#fff;}
 .bu.pagando{background:#d4a03c;border-color:#d4a03c;color:#1d1830;}
+.bu.eligiendo{background:transparent;border:2px dashed #d4a03c;color:#f1d9a8;}
 .bu.cortesia{background:#7c6cf0;border-color:#7c6cf0;color:#fff;}
 .bu.bloqueada{background:repeating-linear-gradient(45deg,#4b4060,#4b4060 4px,#5e5278 4px,#5e5278 8px);border-color:#8d80aa;color:#fff;}
 .bu.marcada{outline:3px solid #fff;outline-offset:1px;}

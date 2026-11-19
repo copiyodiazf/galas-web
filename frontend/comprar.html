@@ -22,6 +22,8 @@ small.serv span{white-space:nowrap;}
 .elegidas .chip button{width:24px;height:24px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:var(--crema);font:800 14px var(--f-texto);cursor:pointer;line-height:1;}
 .elegidas .vacio{font-size:13px;color:var(--gris);}
 .aviso-sala{margin-top:10px;font-size:13px;color:#ffd5d2;}
+.apartado{margin-top:10px;font-size:14px;padding:9px 12px;border-radius:10px;background:rgba(231,194,125,.12);border:1px solid rgba(231,194,125,.35);}
+.apartado b{font-variant-numeric:tabular-nums;color:var(--oro);}
 /* Con plano, la compra se ensancha en la compu para que la sala entre entera. */
 body.con-sala .marco{max-width:820px;}
 .tipos{display:grid;gap:10px;}
@@ -99,10 +101,12 @@ body.con-sala .marco{max-width:820px;}
       <div class="tipos" id="tipos"></div>
       <div id="caja-sala" hidden>
         <div class="precios-sala" id="precios-sala"></div>
-        <p class="ayuda" style="margin-top:10px;">Tocá en el plano las butacas que querés (hasta <span id="max-sala">10</span>). Tocá de nuevo para soltarla.</p>
+        <div class="importante" id="en-app-sala" hidden><b>Antes de elegir:</b> estás dentro de una app (Instagram, Facebook o TikTok). Tocá el menú <b>⋯</b> y elegí <b>Abrir en el navegador</b>: las butacas que elijas acá quedan apartadas en esta pantalla.</div>
+        <p class="ayuda" style="margin-top:10px;">Tocá en el plano las butacas que querés (hasta <span id="max-sala">10</span>): apenas las tocás quedan apartadas para vos<span id="min-apartado"></span> mientras completás tus datos. Tocá de nuevo para soltarla.</p>
         <div id="plano"></div>
         <div class="aviso-sala" id="aviso-sala" role="status"></div>
         <div class="elegidas" id="elegidas"></div>
+        <div class="apartado" id="apartado" role="timer" hidden></div>
       </div>
       <div class="cantidad" id="caja-cantidad">
         <span>¿Cuántas entradas?</span>
@@ -220,6 +224,16 @@ function pintarFechas() {
 // ── Butacas numeradas (la ficha trae "sala"): se eligen en el plano; la cantidad y el tipo salen de ellas ──
 const SALA = () => CFG?.sitio?.sala || null;
 let ELEGIDAS = [], OCUPADAS = new Set(), PLANO = null, PLANO_EV = null, MIA = null;   // MIA = la compra sin pagar de este navegador
+// La butaca es del primero que la toca (Rítmica, 19/11/2026): al tocarla se aparta en el servidor a nombre de este
+// navegador (CLIENTE) por unos minutos, mientras completa los datos. PIDIENDO: tocadas, esperando la respuesta.
+// APARTADO_HASTA: cuándo se le vencen (el servidor dice cuántos segundos quedan; el reloj de cada celular no cuenta).
+const CLIENTE = (() => {
+  const nuevo = () => crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+  try { let c = sessionStorage.getItem('gala_cliente'); if (!c) { c = nuevo(); sessionStorage.setItem('gala_cliente', c); } return c; } catch { return nuevo(); }
+})();
+let PIDIENDO = new Set(), APARTADO_HASTA = 0, RESTAURAR = false;
+const deMiCompra = id => Boolean(MIA?.butacas.includes(id));   // las cuida su compra sin pagar, no el apartado
+const propias = () => ELEGIDAS.filter(id => !deMiCompra(id));
 const tiposIds = () => Object.keys(EV?.tipos || {});
 const tipoDeButaca = id => Plano.tipoDe(SALA(), tiposIds(), id);
 function avisoSala(msg) { $('#aviso-sala').textContent = msg || ''; }
@@ -253,26 +267,94 @@ function pintarSala() {
     return `<div><span>${esc(t.nombre)}${donde}${t.estado === 'agotado' ? ' · <b style="font-size:13px;color:#ffb3b0">agotada</b>' : ''}</span><b>${pesos(aMostrar(t))}${SERV(t)}</b></div>`;
   }).join('') + (zonas.size === 1 ? '<p class="ayuda">por butaca</p>' : '<p class="ayuda">por butaca · las de distinto precio se compran por separado</p>');
   if (PLANO_EV !== EV.id) {
-    PLANO_EV = EV.id; ELEGIDAS = []; MIA = leerMia();
+    // Cambió de función: lo que tenía apartado en la otra se suelta para los demás.
+    if (PLANO_EV && propias().length) soltarTodo(PLANO_EV);
+    PLANO_EV = EV.id; ELEGIDAS = []; PIDIENDO = new Set(); APARTADO_HASTA = 0; MIA = leerMia();
     if (MIA) ELEGIDAS = MIA.butacas.slice();
+    RESTAURAR = true;   // si recargó la página y el servidor todavía le guarda butacas, vuelven a aparecer elegidas
     PLANO = Plano.crear($('#plano'), { sala: SALA(), alTocar: tocar,
-      estado: id => ELEGIDAS.includes(id) ? 'elegida' : OCUPADAS.has(id) ? 'ocupada' : 'libre' });
+      estado: id => PIDIENDO.has(id) ? 'apartando' : ELEGIDAS.includes(id) ? 'elegida' : OCUPADAS.has(id) ? 'ocupada' : 'libre' });
     cargarOcupadas();
   }
   pintarElegidas();
 }
-function tocar(id) {
+async function tocar(id) {
   avisoSala('');
-  if (ELEGIDAS.includes(id)) ELEGIDAS = ELEGIDAS.filter(x => x !== id);
-  else {
-    if (OCUPADAS.has(id)) return;
-    if (ELEGIDAS.length >= CFG.maxEntradas) return avisoSala(`Podés elegir hasta ${CFG.maxEntradas} butacas por compra.`);
-    if (EV.tipos[tipoDeButaca(id)]?.estado === 'agotado') return;
-    if (ELEGIDAS.length && tipoDeButaca(ELEGIDAS[0]) !== tipoDeButaca(id)) return avisoSala(`Esa butaca es de ${EV.tipos[tipoDeButaca(id)].nombre}, con otro precio: compralas por separado.`);
-    ELEGIDAS.push(id);
+  if (PIDIENDO.has(id)) return;
+  if (ELEGIDAS.includes(id)) {
+    ELEGIDAS = ELEGIDAS.filter(x => x !== id);
+    despuesDeElegir();
+    pedirButaca(id, true);   // la suelta en el servidor, para que otro la pueda elegir
+    return;
   }
+  if (OCUPADAS.has(id)) return;
+  if (ELEGIDAS.length + PIDIENDO.size >= CFG.maxEntradas) return avisoSala(`Podés elegir hasta ${CFG.maxEntradas} butacas por compra.`);
+  if (EV.tipos[tipoDeButaca(id)]?.estado === 'agotado') return;
+  const otra = ELEGIDAS[0] || [...PIDIENDO][0];
+  if (otra && tipoDeButaca(otra) !== tipoDeButaca(id)) return avisoSala(`Esa butaca es de ${EV.tipos[tipoDeButaca(id)].nombre}, con otro precio: compralas por separado.`);
+  PIDIENDO.add(id); PLANO?.refrescar();
+  const d = await pedirButaca(id, false);
+  PIDIENDO.delete(id);
+  if (d?.ok && EV && !ELEGIDAS.includes(id)) ELEGIDAS.push(id);
+  else if (d?.error) avisoSala(d.error);
   despuesDeElegir();
 }
+// Aparta (o suelta) una butaca en el servidor. Devuelve { ok } o { error }, y deja el plano al día con la respuesta.
+let SEQ = 0, APLICADO = 0;
+async function pedirButaca(id, soltar) {
+  const ev = EV?.id, n = ++SEQ;
+  try {
+    const r = await fetch('/api/sala/apartar', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evento: ev, butaca: id, cliente: CLIENTE, soltar, ...(MIA ? { orden: MIA.orden } : {}) }) });
+    const d = await r.json().catch(() => ({}));
+    if (ev === EV?.id) aplicarSala(d, n);
+    return r.ok ? { ok: true } : { error: d.error || 'No se pudo apartar la butaca. Probá de nuevo.' };
+  } catch { return soltar ? {} : { error: 'No pudimos apartar la butaca: revisá tu conexión y tocala de nuevo.' }; }
+}
+// El plano que manda el servidor: lo ocupado (lo de los demás, sin decir qué es), lo apartado a su nombre y cuánto le
+// queda. Una respuesta más vieja que otra ya aplicada no se usa (en la apertura llegan varias casi juntas).
+function aplicarSala(d, n) {
+  if (!d?.ocupadas || n < APLICADO) return;
+  APLICADO = n;
+  OCUPADAS = new Set(d.ocupadas);
+  if (RESTAURAR) {
+    RESTAURAR = false;
+    for (const id of d.mias || []) if (!ELEGIDAS.includes(id)) ELEGIDAS.push(id);
+  }
+  if (d.quedan != null) APARTADO_HASTA = Date.now() + d.quedan * 1000;
+  else if (!PIDIENDO.size && !propias().length) APARTADO_HASTA = 0;
+  // Si una elegida aparece ocupada, se la ganó otro (o se le venció y ya la tomaron): se suelta.
+  const perdidas = ELEGIDAS.filter(id => OCUPADAS.has(id));
+  if (perdidas.length) { ELEGIDAS = ELEGIDAS.filter(id => !OCUPADAS.has(id)); avisoSala(`Se ocupó: ${Plano.resumen(perdidas)}. Elegí otra${perdidas.length > 1 ? 's' : ''}.`); }
+}
+function soltarTodo(evento) {
+  fetch('/api/sala/soltar', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ evento, cliente: CLIENTE }) }).catch(() => {});
+}
+// Si cierra o deja la página, sus butacas vuelven a quedar libres para los demás. Si vuelve con «atrás» (la página
+// guardada por el navegador), se le vuelven a apartar las que sigan libres.
+window.addEventListener('pagehide', () => { if (EV && SALA() && propias().length) soltarTodo(EV.id); });
+window.addEventListener('pageshow', async e => {
+  if (!e.persisted || !EV || !SALA()) return;
+  const antes = propias(); ELEGIDAS = ELEGIDAS.filter(deMiCompra); APARTADO_HASTA = 0;
+  for (const id of antes) { const d = await pedirButaca(id, false); if (d.ok && !ELEGIDAS.includes(id)) ELEGIDAS.push(id); }
+  despuesDeElegir();
+});
+// La cuenta regresiva: cuánto le queda para tocar «Ir a pagar». Al vencerse, el servidor ya las soltó.
+function relojApartado() {
+  const el = $('#apartado'), mias = propias();
+  if (!SALA() || !EV || !mias.length || !APARTADO_HASTA || $('#pagar').disabled) { el.hidden = true; return; }
+  const s = Math.max(0, Math.round((APARTADO_HASTA - Date.now()) / 1000));
+  if (s <= 0) {
+    ELEGIDAS = ELEGIDAS.filter(deMiCompra); APARTADO_HASTA = 0; el.hidden = true;
+    avisoSala(`Pasaron ${CFG.apartarMinutos} minutos sin ir a pagar y tus butacas se liberaron. Si siguen libres, podés volver a elegirlas.`);
+    despuesDeElegir(); cargarOcupadas();
+    return;
+  }
+  el.hidden = false;
+  el.innerHTML = `${mias.length === 1 ? 'Tu butaca está apartada' : 'Tus butacas están apartadas'} para vos: te quedan <b>${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}</b> para tocar «Ir a pagar».`;
+}
+setInterval(relojApartado, 1000);
 function despuesDeElegir() {
   tipo = ELEGIDAS.length ? tipoDeButaca(ELEGIDAS[0]) : (tiposIds()[0] || null);
   cant = ELEGIDAS.length;
@@ -284,20 +366,21 @@ function pintarElegidas() {
     : '<span class="vacio">Todavía no elegiste butacas.</span>';
   document.querySelectorAll('[data-soltar]').forEach(b => b.onclick = () => tocar(b.dataset.soltar));
 }
-// Lo ocupado lo da el servidor (vendidas, pagándose y guardadas, sin decir cuál). Si una elegida se ocupó, se suelta.
+// Lo ocupado lo da el servidor (vendidas, pagándose, guardadas y las que otros están eligiendo, sin decir cuál). Si
+// una elegida se ocupó, se suelta.
 async function cargarOcupadas() {
   if (!SALA() || !EV) return;
+  const ev = EV.id, n = ++SEQ;
   try {
-    const r = await fetch(`/api/sala?evento=${encodeURIComponent(EV.id)}${MIA ? '&orden=' + encodeURIComponent(MIA.orden) : ''}`);
-    if (!r.ok) return;
-    OCUPADAS = new Set((await r.json()).ocupadas);
-    const perdidas = ELEGIDAS.filter(id => OCUPADAS.has(id));
-    if (perdidas.length) { ELEGIDAS = ELEGIDAS.filter(id => !OCUPADAS.has(id)); avisoSala(`Se ocupó: ${Plano.resumen(perdidas)}. Elegí otra${perdidas.length > 1 ? 's' : ''}.`); }
+    const r = await fetch(`/api/sala?evento=${encodeURIComponent(ev)}&cliente=${encodeURIComponent(CLIENTE)}${MIA ? '&orden=' + encodeURIComponent(MIA.orden) : ''}`);
+    if (!r.ok || ev !== EV?.id) return;
+    aplicarSala(await r.json(), n);
     despuesDeElegir();
   } catch { /* sin conexión: queda el plano que había; la compra igual controla */ }
 }
-// Mientras elige, el plano se pone al día cada 20 segundos (si la pestaña está a la vista y no está pagando).
-setInterval(() => { if (SALA() && EV && !document.hidden && !$('#pagar').disabled) cargarOcupadas(); }, 20000);
+// Mientras elige, el plano se pone al día cada 8 segundos (si la pestaña está a la vista y no está pagando): con las
+// butacas apartadas al tocarlas, lo que eligen los demás tiene que verse enseguida.
+setInterval(() => { if (SALA() && EV && !document.hidden && !$('#pagar').disabled) cargarOcupadas(); }, 8000);
 
 function pintarTipos() {
   if (!EV) { $('#tipos').innerHTML = '<p class="ayuda">Primero elegí la fecha.</p>'; pintarSala(); return; }
@@ -457,8 +540,10 @@ $('#compra').addEventListener('submit', async ev => {
   if (!EV) return error('Elegí la fecha.');
   const datos = { evento: EV.id, tipo, cantidad: cant, nombre: $('#nombre').value.trim(), email: $('#email').value.trim(), dni: $('#dni').value.trim() };
   if (SALA()) {
+    if (PIDIENDO.size) return error('Esperá un segundo: estamos apartando la butaca que tocaste.');
     if (!ELEGIDAS.length) { $('#plano').scrollIntoView({ behavior: 'smooth', block: 'center' }); return error('Elegí tus butacas en el plano.'); }
     datos.butacas = ELEGIDAS.slice();
+    datos.cliente = CLIENTE;   // las que apartó al tocarlas son suyas
   }
   if (!tipo) return error('Elegí el tipo de entrada.');
   if (datos.nombre.length < 3) { $('#nombre').focus(); return error('Falta tu nombre y apellido.'); }
@@ -513,10 +598,12 @@ fetch('/api/config').then(r => r.json()).then(c => {
     $('#compra').style.display = 'none'; $('#cerrada').style.display = 'block'; return;
   }
   if (c.sandbox) $('#sandbox').hidden = false;
-  if (EN_APP) $('#en-app').hidden = false;
+  if (EN_APP) { $('#en-app').hidden = false; $('#en-app-sala').hidden = false; }
+  if (c.apartarMinutos) $('#min-apartado').textContent = ` ${c.apartarMinutos} minutos`;
   EV = lista.find(e => e.id === pedidoEvento) || (lista.length === 1 ? lista[0] : null);
+  // Con butacas, una hora para transferir (José, 19/11/2026: en la gala de patín una transferencia tardó casi una hora).
   $('#reserva').textContent = c.sitio.sala
-    ? `Tus butacas quedan apartadas ${c.reservaMinutos} minutos mientras pagás. Si la transferencia no se acredita en ese tiempo, se liberan para otros.`
+    ? `Al tocar «Ir a pagar», tus butacas quedan apartadas ${c.reservaMinutos} minutos para que transfieras. Si el banco tarda más, igual te mandamos las entradas apenas llegue la plata: tus butacas si siguen libres o, si no, las mejores que queden.`
     : `Te guardamos el lugar ${c.reservaMinutos} minutos mientras pagás.`;
   pintarFechas(); pintarTipos(); actualizar();
 }).catch(() => error('No pudimos cargar los precios. Revisá tu conexión y recargá la página.'));

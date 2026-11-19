@@ -701,7 +701,7 @@ async function cargarMisVentas() {
 
 // ── Sala (butacas numeradas): el plano con lo vendido, guardar butacas y cortesías con butaca ──
 let S_PLANO = null, S_EV = null, S_DATOS = { butacas: {} }, MARCADAS = [];
-const ESTADO_BUTACA = { vendida: 'Vendida', pagando: 'Pagándose ahora (todavía puede vencer)', cortesia: 'Cortesía', bloqueada: 'Guardada' };
+const ESTADO_BUTACA = { vendida: 'Vendida', pagando: 'Pagándose ahora (todavía puede vencer)', eligiendo: 'La está eligiendo alguien en la web (todavía no fue a pagar)', cortesia: 'Cortesía', bloqueada: 'Guardada' };
 function estadoSala(id) {
   const b = S_DATOS.butacas[id], c = [b ? b.estado : 'libre'];
   if (MARCADAS.includes(id)) c.push('marcada');
@@ -716,10 +716,10 @@ async function cargarSala() {
       S_EV = EVA; MARCADAS = []; $('#s-quien').hidden = true;
       S_PLANO = Plano.crear($('#s-plano'), { sala: CFG.sala, estado: estadoSala, alTocar: tocarSala,
         extra: id => { const b = S_DATOS.butacas[id]; return `${Plano.etiqueta(CFG.sala, id)}${b?.estado === 'ocupada' ? ' · no disponible' : b ? ' · ' + (ESTADO_BUTACA[b.estado] || b.estado) + (b.nombre ? ' · ' + b.nombre : '') : ' · libre'}`; } });
-      $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['cortesia', 'Cortesía'], ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
+      $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['eligiendo', 'Eligiéndose en la web'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['cortesia', 'Cortesía'], ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
     } else S_PLANO.refrescar();
     const c = S_DATOS.cuentas;
-    $('#s-cifras').innerHTML = [[c.libres, 'Libres'], [c.vendida, 'Vendidas'], [c.pagando, 'Pagándose ahora'], [c.cortesia, 'Cortesías'], [c.bloqueada, 'Guardadas'], [S_DATOS.total, 'Butacas de la sala']]
+    $('#s-cifras').innerHTML = [[c.libres, 'Libres'], [c.eligiendo || 0, 'Eligiéndose en la web'], [c.vendida, 'Vendidas'], [c.pagando, 'Pagándose ahora'], [c.cortesia, 'Cortesías'], [c.bloqueada, 'Guardadas'], [S_DATOS.total, 'Butacas de la sala']]
       .map(([b, s]) => `<div class="cifra"><b>${b}</b><span>${s}</span></div>`).join('');
     pintarMarcadas();
   } catch (x) { alert(x.message); }

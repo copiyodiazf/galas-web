@@ -24,6 +24,7 @@ import { Op, QueryTypes, fn, col } from 'sequelize'
 import { sequelize, Orden, Entrada, Usuario, Visita, SinImputar, Evento, Imagen } from './models/index.js'
 import { leerSitio, normalizarEvento } from './sitio.js'
 import { crearSala, butacasDe, leerButacas, tipoDeButaca, etiquetaButaca, resumenButacas, cupoDeSala, elegirMejores } from './butacas.js'
+import { crearApartadas, clienteValido } from './apartadas.js'
 import { chytapayConfigurado, chytapayEsProduccion, clavePublicable, crearCobroCheckout, cobroPagado, firmaValida,
   urlAutorizar, canjearCode, guardarVinculo, vinculoActual, asignarSede, sedeConfigurada } from './chytapay.js'
 
@@ -83,12 +84,18 @@ const CARGO_PUNTO_PCT = numEnv('CARGO_PUNTO_PCT', 10)  // en los puntos de venta
 const MAX_ENTRADAS = numEnv('MAX_ENTRADAS', 10)
 // También es el vencimiento del cobro en Chytapay, que acepta de 3 a 60 minutos. Va el máximo: hay bancos que
 // demoran la transferencia (en El Quinto Elemento una llegó a los 34 minutos y, con 30, quedó sin asignar).
-// Con butacas numeradas, mucho menos (10 minutos): una butaca apartada por alguien que no paga es una butaca que
-// nadie más puede elegir, y José no quiere butacas reservadas sin la plata acreditada (11/11/2026). Si la
-// transferencia llega después, se emite igual (emitirTardia): con sus butacas si siguen libres o, si no, con las
-// mejores que queden juntas.
-const RESERVA_MINUTOS = SALA ? Math.min(30, Math.max(5, numEnv('RESERVA_BUTACAS_MINUTOS', 10)))
+// Con butacas numeradas también 60 (José, 19/11/2026). Primero fueron 10 minutos (11/11: nada de butacas reservadas
+// sin la plata acreditada), pero en la gala de patín una transferencia tardó cerca de una hora en entrar y con 10 se
+// perjudica al que ya pagó. Lo que frena la butaca sin pagar es ahora el tiempo ANTES de ir a pagar (APARTAR_MINUTOS,
+// abajo). Si la transferencia llega después de la hora, se emite igual (emitirTardia): con sus butacas si siguen
+// libres o, si no, con las mejores que queden juntas.
+const RESERVA_MINUTOS = SALA ? Math.min(60, Math.max(10, numEnv('RESERVA_BUTACAS_MINUTOS', 60)))
   : Math.min(60, Math.max(10, numEnv('RESERVA_MINUTOS', 60)))
+// Con butacas: la butaca es del primero que la toca en el plano y queda apartada para él este tiempo, mientras
+// completa sus datos (José, 19/11/2026: "unos 10 o 15 minutos"). Si no toca «Ir a pagar», se libera.
+const APARTAR_MINUTOS = Math.min(30, Math.max(3, numEnv('APARTAR_BUTACAS_MINUTOS', 15)))
+const APARTADAS = crearApartadas({ minutos: APARTAR_MINUTOS, maxPorCliente: MAX_ENTRADAS, maxPorIp: numEnv('MAX_APARTADAS_IP', 120) })
+setInterval(() => APARTADAS.purgar(), 30000).unref()
 const POCAS = numEnv('AVISO_POCAS', 30)                // desde cuántas libres se avisa "quedan pocas" (el cupo nunca se muestra)
 const SIN_TOPE = 100000                                 // un cupo así de grande = "sin tope": el panel no muestra barra ni libres
 const VENTA_ABIERTA = String(process.env.VENTA_ABIERTA || 'true') !== 'false'   // llave general de la venta online
@@ -350,18 +357,21 @@ async function butacasTomadas(eventoId, { transaction, excepto, deLaPersona } = 
 // Revisa (con el bloqueo tomado) que las butacas pedidas estén libres y las aparta para esta compra.
 // cortesia: puede usar las que el organizador se guardó (dejan de estar guardadas). reemplazar: la misma
 // persona vuelve a elegir; sus compras online sin pagar de este evento se dan por abandonadas.
-async function apartarButacas(ev, datos, { cortesia = false, reemplazar = false } = {}, transaction) {
+// cliente: el navegador que compra; las que él apartó al tocarlas son suyas, las que apartaron los demás no se
+// pueden comprar (tampoco desde la boletería ni como cortesía: sin cliente, cualquier apartada está ocupada).
+async function apartarButacas(ev, datos, { cortesia = false, reemplazar = false, cliente = null } = {}, transaction) {
   const pedidas = butacasDe(datos)
   const persona = reemplazar ? { dni: datos.dni, email: datos.email } : null
   const tomadas = await butacasTomadas(ev.id, { transaction, deLaPersona: persona })
   const bloq = new Set(ev.bloqueadas || []), resv = new Set(ev.reservadas || [])   // las reservadas, ni como cortesía
-  const ocupadas = pedidas.filter(b => tomadas.has(b) || resv.has(b) || (!cortesia && bloq.has(b)))
+  const ajenas = new Set(APARTADAS.deOtros(ev.id, cliente))
+  const ocupadas = pedidas.filter(b => tomadas.has(b) || resv.has(b) || ajenas.has(b) || (!cortesia && bloq.has(b)))
   if (ocupadas.length) {
     const quien = ocupadas.length === 1 ? `La butaca ${etiquetaDe(ocupadas[0])} ya no está libre` : `Las butacas ${resumenButacas(SALA, ocupadas)} ya no están libres`
     // `sala`: todo lo que no está libre en este momento, para que la compra repinte el plano entero y no se vuelva a
     // elegir algo que ya se fue (en la apertura de la venta el plano de cada uno queda viejo en segundos).
     return { status: 409, error: `${quien}: alguien la${ocupadas.length === 1 ? '' : 's'} eligió recién. Elegí otra${ocupadas.length === 1 ? '' : 's'}.`, ocupadas,
-      sala: [...tomadas.keys(), ...resv, ...(cortesia ? [] : bloq)] }
+      sala: [...new Set([...tomadas.keys(), ...resv, ...ajenas, ...(cortesia ? [] : bloq)])] }
   }
   if (persona) {
     const [n] = await Orden.update({ estado: 'abandonada' }, { transaction, where: { evento: ev.id, metodo: 'chytapay', estado: 'pendiente',
@@ -658,13 +668,17 @@ async function confirmarYEmitir(orden, extra = {}) {
       const tomadas = await butacasTomadas(orden.evento, { transaction, excepto: orden.id })
       const bloq = new Set([...(ev?.bloqueadas || []), ...(ev?.reservadas || [])])
       const mias = butacasDe(orden)
+      // Las que alguien está eligiendo en el plano (apartadas al tocarlas): las suyas se las queda el que ya pagó y
+      // al otro se le sacan; las nuevas, si hacen falta, se buscan entre las que nadie está eligiendo.
+      const eligiendo = new Set(APARTADAS.todas(orden.evento))
       if (mias.some(b => tomadas.has(b) || bloq.has(b))) {
-        const nuevas = ev && elegirMejores(SALA, ev, orden.tipo, mias.length, id => !tomadas.has(id) && !bloq.has(id))
+        const nuevas = ev && elegirMejores(SALA, ev, orden.tipo, mias.length, id => !tomadas.has(id) && !bloq.has(id) && !eligiendo.has(id))
         if (!nuevas) return { sinLugar: true }
         antes = orden.butacas
         campos.butacas = nuevas.join(',')
       }
       const [n] = await Orden.update(campos, { where: sinEmitir, transaction })
+      if (n) APARTADAS.quitar(orden.evento, butacasDe({ butacas: campos.butacas || orden.butacas }))
       return { n }
     })
     sinCacheSala(orden.evento)
@@ -721,16 +735,20 @@ const compraParaRetomar = v => Orden.findOne({ where: { estado: 'pendiente', met
 
 // Por conexión (IP): en los datos móviles muchas familias salen por la MISMA IP (CGNAT), y en la apertura de una venta
 // con butacas todas compran a la vez. Se suben desde Render sin tocar el código (MAX_COMPRAS_IP_MINUTO, MAX_SALA_IP_MINUTO).
-const COMPRAS_IP_MINUTO = numEnv('MAX_COMPRAS_IP_MINUTO', 30), SALA_IP_MINUTO = numEnv('MAX_SALA_IP_MINUTO', 120)
+// El plano: 300 por minuto (antes 120). Con las butacas apartadas al tocarlas, la compra lo pide cada 8 s para que se
+// vea enseguida lo que eligen los demás, y sale de la memoria: no le cuesta nada a la base.
+const COMPRAS_IP_MINUTO = numEnv('MAX_COMPRAS_IP_MINUTO', 30), SALA_IP_MINUTO = numEnv('MAX_SALA_IP_MINUTO', 300)
 app.post('/api/orders', rateLimit({ windowMs: 60000, max: COMPRAS_IP_MINUTO }), async (req, res) => {
   try {
     if (!VENTA_ABIERTA) return res.status(403).json({ error: 'La venta online todavía no está abierta.' })
     if (!chytapayConfigurado()) return res.status(503).json({ error: 'El cobro online no está disponible en este momento.' })
     const v = validarCompra(req.body || {})
     if (v.error) return res.status(400).json({ error: v.error })
+    const cliente = clienteValido(req.body?.cliente)
     const previa = await compraParaRetomar(v)
     if (previa) {
       const minutos = Math.max(1, Math.floor((new Date(previa.createdAt).getTime() + RESERVA_MINUTOS * 60000 - Date.now()) / 60000))
+      if (cliente) APARTADAS.soltarTodas(v.evento, cliente)
       console.log(`🔁 Compra retomada: ${previa.id} · ${pesos(previa.total)}`)
       return res.json({ orderId: previa.id, pago: { paymentId: previa.paymentId, pk: clavePublicable(), minutos }, total: previa.total, retomada: true })
     }
@@ -741,7 +759,7 @@ app.post('/api/orders', rateLimit({ windowMs: 60000, max: COMPRAS_IP_MINUTO }), 
     const id = 'orden_' + randomUUID()
     const { subtotal, cargo, total } = importes(v.precio, v.cantidad, CARGO_PCT)
     const { precio, ...datos } = v
-    const r = await crearOrdenConCupo({ id, ...datos, metodo: 'chytapay', subtotal, cargo, total, estado: 'pendiente' }, { reemplazar: true })
+    const r = await crearOrdenConCupo({ id, ...datos, metodo: 'chytapay', subtotal, cargo, total, estado: 'pendiente' }, { reemplazar: true, cliente })
     if (r.error) return res.status(r.status).json({ error: r.error, ...(r.ocupadas ? { ocupadas: r.ocupadas, sala: r.sala } : {}) })
     pendientesPorIp.get(ip)?.push({ id, t: Date.now() }) ?? pendientesPorIp.set(ip, [{ id, t: Date.now() }])
 
@@ -758,6 +776,9 @@ app.post('/api/orders', rateLimit({ windowMs: 60000, max: COMPRAS_IP_MINUTO }), 
       throw e
     }
     await Orden.update({ paymentId: cobro.paymentRequestId }, { where: { id } })
+    // Desde acá las cuida la compra (la hora para transferir): lo apartado al tocarlas se suelta. Recién ahora, con
+    // el cobro creado: si Chytapay fallaba, la compra se borraba y las butacas tenían que seguir siendo suyas.
+    if (cliente) APARTADAS.soltarTodas(v.evento, cliente)
     console.log(`🧾 Orden creada: ${id} · ${etiqueta} · ${pesos(total)}`)
     // El paymentRequestId es sensible (con la clave pública alcanza para leer el cobro): va solo a esta respuesta.
     res.json({ orderId: id, pago: { paymentId: cobro.paymentRequestId, pk: clavePublicable(), minutos: RESERVA_MINUTOS }, total })
@@ -1480,27 +1501,84 @@ app.post('/api/admin/chytapay/sede', requireAuth(['admin']), async (_req, res) =
 // Para la compra: qué butacas no se pueden elegir. No dice por qué (vendida, pagándose o guardada por el
 // organizador) ni de quién. "orden" = la compra sin pagar de este navegador: sus butacas se muestran libres
 // para él, así puede volver a pagarlas o cambiarlas (el número de compra no se adivina).
-const _salaCache = new Map()   // evento → { t, ocupadas }
+// Lo vendido y pagándose sale de la base cada 3 s como mucho (en la apertura lo piden cientos de familias). Cada
+// compra nueva borra la copia y le sube el número a la función: una lectura que había empezado antes de esa compra
+// no se guarda (si no, durante 3 s el plano la mostraba libre y alguien la podía apartar al tocarla).
+const _salaCache = new Map(), _salaGen = new Map()   // evento → { t, tomadas } · evento → número de cambios
+async function tomadasEnCache(evId) {
+  const c = _salaCache.get(evId)
+  if (c && Date.now() - c.t <= 3000) return c.tomadas
+  let tomadas
+  for (let i = 0; i < 3; i++) {
+    const g = _salaGen.get(evId) || 0
+    tomadas = await butacasTomadas(evId)
+    if ((_salaGen.get(evId) || 0) === g) { _salaCache.set(evId, { t: Date.now(), tomadas }); break }
+  }
+  return tomadas
+}
+const sinCacheSala = id => { _salaCache.delete(id); _salaGen.set(id, (_salaGen.get(id) || 0) + 1) }
+
+// El plano como lo ve un navegador: lo ocupado (sin decir por qué) y lo que él tiene apartado, con los segundos que
+// le quedan para ir a pagar. orden = su compra sin pagar: esas butacas le salen libres.
+async function salaPara(ev, { cliente = null, orden = '' } = {}) {
+  const tomadas = await tomadasEnCache(ev.id)
+  const ocupadas = [...tomadas].filter(([, o]) => !(orden && o.id === orden && o.estado === 'pendiente')).map(([id]) => id)
+  const mia = APARTADAS.de(ev.id, cliente)
+  return {
+    ocupadas: [...new Set([...ocupadas, ...(ev.bloqueadas || []), ...(ev.reservadas || []), ...APARTADAS.deOtros(ev.id, cliente)])],
+    mias: mia?.butacas || [], quedan: mia ? Math.max(0, Math.round((mia.hasta - Date.now()) / 1000)) : null,
+  }
+}
 app.get('/api/sala', rateLimit({ windowMs: 60000, max: SALA_IP_MINUTO }), async (req, res) => {
   const ev = eventoDe(req.query.evento)
   if (!usaSala(ev) || !Number(ev.publicado)) return res.status(404).json({ error: 'Esta fecha no tiene butacas numeradas' })
   try {
-    let c = _salaCache.get(ev.id)
-    if (!c || Date.now() - c.t > 3000) {
-      const tomadas = await butacasTomadas(ev.id)
-      c = { t: Date.now(), tomadas }
-      _salaCache.set(ev.id, c)
-    }
-    const mia = String(req.query.orden || '').slice(0, 60)
-    const ocupadas = [...c.tomadas].filter(([, o]) => !(mia && o.id === mia && o.estado === 'pendiente')).map(([id]) => id)
     res.set('Cache-Control', 'no-store')
-    res.json({ ocupadas: [...ocupadas, ...(ev.bloqueadas || []), ...(ev.reservadas || [])] })
+    res.json(await salaPara(ev, { cliente: clienteValido(req.query.cliente), orden: String(req.query.orden || '').slice(0, 60) }))
   } catch (e) {
     console.error('❌ Error armando la sala:', e?.message || e)
     res.status(500).json({ error: 'No se pudo cargar el plano' })
   }
 })
-const sinCacheSala = id => _salaCache.delete(id)
+
+// Tocar una butaca la aparta para ese navegador (y tocarla de nuevo la suelta). Cada respuesta trae el plano de este
+// momento, así en la apertura el que está eligiendo ve enseguida lo que se ocupó. Nada de esto pasa por la base.
+const TOQUES_IP_MINUTO = numEnv('MAX_TOQUES_IP_MINUTO', 300)
+app.post('/api/sala/apartar', rateLimit({ windowMs: 60000, max: TOQUES_IP_MINUTO }), async (req, res) => {
+  const ev = eventoDe(req.body?.evento)
+  if (!usaSala(ev) || !Number(ev.publicado)) return res.status(404).json({ error: 'Esta fecha no tiene butacas numeradas' })
+  if (!VENTA_ABIERTA || !chytapayConfigurado() || !vendibleOnline(ev)) return res.status(403).json({ error: 'La venta online no está abierta.' })
+  const cliente = clienteValido(req.body?.cliente)
+  const butaca = leerButacas([req.body?.butaca], SALA)?.[0]
+  if (!cliente || !butaca) return res.status(400).json({ error: 'Esa butaca no existe. Recargá la página.' })
+  const orden = String(req.body?.orden || '').slice(0, 60)
+  try {
+    if (req.body?.soltar === true) {
+      APARTADAS.soltar(ev.id, cliente, butaca)
+      return res.json({ ok: true, ...(await salaPara(ev, { cliente, orden })) })
+    }
+    const tomadas = await tomadasEnCache(ev.id)
+    // Desde acá hasta apartarla no hay ningún await: nadie más puede tocarla en el medio.
+    const t = tomadas.get(butaca)
+    const vendida = t && !(orden && t.id === orden && t.estado === 'pendiente')
+    const r = vendida || (ev.bloqueadas || []).includes(butaca) || (ev.reservadas || []).includes(butaca) ? { error: 'ocupada' }
+      : APARTADAS.apartar(ev.id, cliente, butaca, ipDe(req))
+    if (r.error === 'tope_ip') return res.status(429).json({ error: 'Hay demasiadas butacas apartadas desde esta conexión. Probá en unos minutos o con otra conexión (wifi o datos).' })
+    const sala = await salaPara(ev, { cliente, orden })
+    if (r.error === 'tope') return res.status(409).json({ error: `Podés elegir hasta ${MAX_ENTRADAS} butacas por compra.`, ...sala })
+    if (r.error) return res.status(409).json({ error: `La butaca ${etiquetaDe(butaca)} ya la eligió otra persona. Elegí otra.`, ...sala })
+    res.json({ ok: true, ...sala })
+  } catch (e) {
+    console.error('❌ Error apartando una butaca:', e?.message || e)
+    res.status(500).json({ error: 'No se pudo apartar la butaca. Probá de nuevo.' })
+  }
+})
+// Al cerrar o dejar la página de compra se sueltan sus butacas (si no, quedarían apartadas hasta que venza el tiempo).
+app.post('/api/sala/soltar', rateLimit({ windowMs: 60000, max: TOQUES_IP_MINUTO }), (req, res) => {
+  const ev = eventoDe(req.body?.evento), cliente = clienteValido(req.body?.cliente)
+  if (ev && cliente) APARTADAS.soltarTodas(ev.id, cliente)
+  res.json({ ok: true })
+})
 
 // Para el panel: el estado de cada butaca ocupada. La organización ve de quién es; la boletería, solo si está libre.
 app.get('/api/admin/sala', requireAuth(['admin', 'organizador', 'venta', 'control']), async (req, res) => {
@@ -1520,8 +1598,10 @@ app.get('/api/admin/sala', requireAuth(['admin', 'organizador', 'venta', 'contro
     const resv = (ev.reservadas || []).filter(id => !butacas[id])
     for (const id of resv) butacas[id] = { estado: 'ocupada' }
     for (const id of ev.bloqueadas || []) if (!butacas[id]) butacas[id] = { estado: 'bloqueada' }
+    // Las que alguien tocó en la web y todavía no fue a pagar: ni la boletería ni las cortesías pueden usarlas.
+    for (const id of APARTADAS.todas(ev.id)) if (!butacas[id]) butacas[id] = { estado: 'eligiendo' }
     const total = SALA.total - resv.length
-    const cuentas = { libres: total, vendida: 0, pagando: 0, cortesia: 0, bloqueada: 0 }
+    const cuentas = { libres: total, vendida: 0, pagando: 0, eligiendo: 0, cortesia: 0, bloqueada: 0 }
     for (const b of Object.values(butacas)) if (b.estado !== 'ocupada') { cuentas[b.estado]++; cuentas.libres-- }
     res.json({ evento: ev.id, butacas, cuentas, total })
   } catch (e) {
@@ -1543,9 +1623,9 @@ app.post('/api/admin/sala/bloquear', requireAuth(ORGANIZACION), async (req, res)
       const actuales = new Set(fila.bloqueadas || [])
       if (bloquear) {
         const tomadas = await butacasTomadas(ev.id, { transaction })
-        const resv = new Set(fila.reservadas || [])
-        const ocupadas = lista.filter(b => tomadas.has(b) || resv.has(b))
-        if (ocupadas.length) return { error: `No se pueden guardar: ${resumenButacas(SALA, ocupadas)} ya ${ocupadas.length === 1 ? 'está vendida o pagándose' : 'están vendidas o pagándose'}.` }
+        const resv = new Set(fila.reservadas || []), eligiendo = new Set(APARTADAS.todas(ev.id))
+        const ocupadas = lista.filter(b => tomadas.has(b) || resv.has(b) || eligiendo.has(b))
+        if (ocupadas.length) return { error: `No se pueden guardar: ${resumenButacas(SALA, ocupadas)} ya ${ocupadas.length === 1 ? 'está vendida, pagándose o la está eligiendo alguien en la web' : 'están vendidas, pagándose o las está eligiendo alguien en la web'}.` }
         lista.forEach(b => actuales.add(b))
       } else lista.forEach(b => actuales.delete(b))
       fila.bloqueadas = [...actuales]
@@ -1586,6 +1666,7 @@ app.get('/api/config', async (_req, res) => {
   const online = VENTA_ABIERTA && chytapayConfigurado()
   res.json({
     ventaAbierta: online, maxEntradas: MAX_ENTRADAS, cargoPct: CARGO_PCT, cargoPuntoPct: CARGO_PUNTO_PCT, reservaMinutos: RESERVA_MINUTOS,
+    ...(SALA ? { apartarMinutos: APARTAR_MINUTOS } : {}),
     sitio: SITIO,
     eventos: [...EVENTOS.values()].filter(e => Number(e.publicado) && noPaso(e)).map(e => ({
       id: e.id, nombre: e.nombre, subtitulo: e.subtitulo, fecha: e.fecha, hora: e.hora, cuando: cuandoDe(e), puertas: e.puertas,
@@ -1623,7 +1704,7 @@ app.get('/health', (_req, res) => res.send(`Backend ${SITIO.nombre} ✅`))
 app.listen(PORT, () => {
   console.log(`🚀 ${SITIO.nombre} (tema ${TEMA}): puerto ${PORT}`)
   if (!chytapayConfigurado()) console.warn('⚠️ Faltan datos de Chytapay (CHYTAPAY_*): la venta online queda cerrada')
-  console.log(`💳 Chytapay [${chytapayEsProduccion() ? 'PRODUCCIÓN' : 'sandbox'}] · cargo ${CARGO_PCT}% online, ${CARGO_PUNTO_PCT}% en puntos · reserva ${RESERVA_MINUTOS} min · venta ${VENTA_ABIERTA ? 'ABIERTA' : 'cerrada'}`)
+  console.log(`💳 Chytapay [${chytapayEsProduccion() ? 'PRODUCCIÓN' : 'sandbox'}] · cargo ${CARGO_PCT}% online, ${CARGO_PUNTO_PCT}% en puntos · reserva ${RESERVA_MINUTOS} min${SALA ? ` · butacas apartadas ${APARTAR_MINUTOS} min al tocarlas` : ''} · venta ${VENTA_ABIERTA ? 'ABIERTA' : 'cerrada'}`)
 })
 
 // ═══════════════════════════════════════════════════════════════
