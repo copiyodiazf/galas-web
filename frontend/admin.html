@@ -202,9 +202,13 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
           <button class="chico" onclick="guardarButacas(false)">Largarlas a la venta</button>
           <button class="chico" onclick="desmarcar()">Desmarcar</button>
         </div>
-        <p class="ayuda" style="margin-top:12px;">Las <b>guardadas</b> no se pueden comprar online ni en la boletería: sirven para la familia de las chicas, las cámaras o los invitados. Se dan con una <b>cortesía</b>:</p>
+        <p class="ayuda" style="margin-top:12px;">Las <b>guardadas</b> no se pueden comprar online ni en la boletería: sirven para la familia de las chicas, las cámaras o los invitados.</p>
+        <!-- Las cortesías las da y las ve solo la administración (José, 21/11/2026) -->
+        <div class="solo-admin">
+        <p class="ayuda" style="margin-top:8px;">Se dan con una <b>cortesía</b>:</p>
         <div class="fila" style="margin-top:8px;"><input id="sc-nombre" placeholder="Nombre y apellido"><input id="sc-email" placeholder="Email" type="email"></div>
         <div class="fila"><input id="sc-dni" placeholder="DNI (opcional)" inputmode="numeric"><button class="chico oro" onclick="cortesiaSala()">Dar las marcadas como cortesía</button></div>
+        </div>
         <div id="s-msg" style="margin-top:8px;"></div>
       </section>
     </div>
@@ -241,7 +245,7 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
         <button class="chico oro" onclick="conectarChytapay()" style="margin-top:10px;" id="cy-boton">Generar enlace para conectar la cuenta del organizador</button>
         <div id="cy-enlace"></div>
       </section>
-      <section class="tarjeta ve-todo">
+      <section class="tarjeta solo-admin">
         <p class="paso">Cortesía (para la fecha elegida)</p>
         <p class="ayuda" id="c-con-sala" hidden>Con butacas numeradas, las cortesías se dan desde la pestaña <a href="#" onclick="abrir('sala');return false;">Sala</a>: marcás las butacas en el plano y ponés a quién van.</p>
         <div id="c-sin-sala">
@@ -377,9 +381,10 @@ function salir() { localStorage.removeItem('gala_sesion'); S = null; cerrarCamar
 // ── Pestañas según el rol ──
 const PESTANAS = {
   admin: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['punto', 'Punto de venta'], ['herramientas', 'Herramientas']],
-  // El organizador: ve todo, carga la cartelera y emite cortesías; no vende (sin "Punto de venta" ni pruebas).
+  // El organizador: ve las ventas y carga la cartelera; no vende (sin "Punto de venta" ni pruebas) y no emite ni ve
+  // las cortesías: son solo de la administración (José, 21/11/2026).
   // En una gala de una sola fecha tampoco ve la cartelera (los precios y las etapas los carga José en la ficha).
-  organizador: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['herramientas', 'Cortesías y planilla']],
+  organizador: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['herramientas', 'Planilla']],
   control: [['puerta', 'Puerta'], ['ventas', 'Buscar']],
   venta: [['punto', 'Vender'], ['ventas', 'Buscar']],
 };
@@ -737,11 +742,11 @@ async function cargarSala() {
       S_EV = EVA; MARCADAS = []; $('#s-quien').hidden = true;
       S_PLANO = Plano.crear($('#s-plano'), { sala: CFG.sala, estado: estadoSala, alTocar: tocarSala,
         extra: id => { const b = S_DATOS.butacas[id]; return `${Plano.etiqueta(CFG.sala, id)}${b?.estado === 'ocupada' ? ' · no disponible' : b ? ' · ' + (ESTADO_BUTACA[b.estado] || b.estado) + (b.nombre ? ' · ' + b.nombre : '') : ' · libre'}`; } });
-      $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['eligiendo', 'Eligiéndose en la web'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['retenida', 'Venció sin pagar'], ['cortesia', 'Cortesía'], ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
+      $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['eligiendo', 'Eligiéndose en la web'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['retenida', 'Venció sin pagar'], ...(ES_ADMIN() ? [['cortesia', 'Cortesía']] : []), ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
     } else S_PLANO.refrescar();
     const c = S_DATOS.cuentas;
     $('#s-cifras').innerHTML = [[c.libres, 'Libres'], [c.eligiendo || 0, 'Eligiéndose en la web'], [c.vendida, 'Vendidas'], [c.pagando, 'Pagándose ahora'],
-      ...(c.retenida ? [[c.retenida, 'Vencidas sin pagar (guardadas)']] : []), [c.cortesia, 'Cortesías'], [c.bloqueada, 'Guardadas'], [S_DATOS.total, 'Butacas de la sala']]
+      ...(c.retenida ? [[c.retenida, 'Vencidas sin pagar (guardadas)']] : []), ...(ES_ADMIN() ? [[c.cortesia, 'Cortesías']] : []), [c.bloqueada, 'Guardadas'], [S_DATOS.total, 'Butacas de la sala']]
       .map(([b, s]) => `<div class="cifra"><b>${b}</b><span>${s}</span></div>`).join('');
     pintarMarcadas();
   } catch (x) { alert(x.message); }

@@ -105,6 +105,12 @@ const POCAS = numEnv('AVISO_POCAS', 30)                // desde cuántas libres 
 const SIN_TOPE = 100000                                 // un cupo así de grande = "sin tope": el panel no muestra barra ni libres
 const VENTA_ABIERTA = String(process.env.VENTA_ABIERTA || 'true') !== 'false'   // llave general de la venta online
 const ORGANIZACION = ['admin', 'organizador']          // ven resumen, ventas, planilla y cargan la cartelera
+// Las cortesías las emite y las ve SOLO la administración (José, 21/11/2026). El organizador, la puerta y la boletería
+// no las ven en ningún listado, búsqueda, planilla ni cuenta: ocupan lugar igual, pero a ellos la capacidad les llega
+// ya sin esos lugares (como las reservadas) y en el plano son butacas ocupadas, sin nombre. En la puerta, el QR de una
+// cortesía vale y se ve como el de cualquier entrada.
+const veCortesias = req => req.usuario?.rol === 'admin'
+const sinCortesias = req => ({ [Op.notIn]: veCortesias(req) ? NO_VENTA : [...NO_VENTA, 'cortesia'] })
 
 const EVENTO_MAIL_FROM = process.env.EVENTO_MAIL_FROM || 'entradas@ejemplo.com.ar'
 const IS_PROD = process.env.NODE_ENV === 'production'
@@ -1089,6 +1095,7 @@ app.get('/api/admin/resumen', requireAuth(ORGANIZACION), async (req, res) => {
     const lista = [...EVENTOS.values()].map(e => ({ id: e.id, nombre: e.nombre, fecha: e.fecha, cuando: cuandoDe(e) }))
     if (!ev) return res.json({ eventos: lista, evento: null })
     const oc = await ocupacion(ev.id)
+    const ocultar = !veCortesias(req)
     const pagadas = { evento: ev.id, estado: 'pagada', metodo: { [Op.notIn]: NO_PLATA } }
     const totales = await Orden.findOne({ where: pagadas, raw: true,
       attributes: [[fn('COUNT', col('id')), 'ordenes'], [fn('SUM', col('cantidad')), 'entradas'], [fn('SUM', col('subtotal')), 'recaudado'], [fn('SUM', col('total')), 'cobrado'], [fn('SUM', col('cargo')), 'cargo']] })
@@ -1116,16 +1123,21 @@ app.get('/api/admin/resumen', requireAuth(ORGANIZACION), async (req, res) => {
       attributes: ['vendedor', [fn('COUNT', col('id')), 'operaciones'], [fn('SUM', col('cantidad')), 'entradas'], [fn('SUM', col('subtotal')), 'subtotal'], [fn('SUM', col('cargo')), 'cargo'], [fn('SUM', col('total')), 'total']] })
     const cortesias = await Orden.sum('cantidad', { where: { evento: ev.id, estado: 'pagada', metodo: 'cortesia' } }) || 0
     const pendientes = await Orden.count({ where: { evento: ev.id, estado: 'pendiente', metodo: 'chytapay', createdAt: { [Op.gte]: new Date(Date.now() - RESERVA_MINUTOS * 60000) } } })
-    const ingresosPorTipo = Object.fromEntries((await Entrada.findAll({ where: { evento: ev.id, usado: true }, attributes: ['tipo', [fn('COUNT', col('id')), 'n']], group: ['tipo'], raw: true })).map(f => [f.tipo, Number(f.n)]))
+    // Sin ver las cortesías, tampoco cuenta quiénes entraron con una.
+    const idsCortesia = ocultar ? (await Orden.findAll({ where: { evento: ev.id, metodo: 'cortesia' }, attributes: ['id'], raw: true })).map(o => o.id) : []
+    const ingresosPorTipo = Object.fromEntries((await Entrada.findAll({ where: { evento: ev.id, usado: true, ...(idsCortesia.length ? { orden_id: { [Op.notIn]: idsCortesia } } : {}) },
+      attributes: ['tipo', [fn('COUNT', col('id')), 'n']], group: ['tipo'], raw: true })).map(f => [f.tipo, Number(f.n)]))
     const sinImputar = await SinImputar.count({ where: { resuelto: false } })
     const inicioHoy = comienzoDelDiaArgentino()
-    const ultimas = await Orden.findAll({ where: { evento: ev.id, estado: { [Op.in]: ['pagada', 'reversada'] }, metodo: { [Op.notIn]: NO_VENTA } }, order: [['updatedAt', 'DESC']], limit: 200 })
+    const ultimas = await Orden.findAll({ where: { evento: ev.id, estado: { [Op.in]: ['pagada', 'reversada'] }, metodo: sinCortesias(req) }, order: [['updatedAt', 'DESC']], limit: 200 })
     const ing = await ingresosDe(ultimas.map(o => o.id))
     res.json({
       eventos: lista,
       evento: { id: ev.id, nombre: ev.nombre, cuando: cuandoDe(ev), publicado: Boolean(Number(ev.publicado)), ventaAbierta: vendibleOnline(ev) },
-      tipos: Object.fromEntries(Object.entries(oc).map(([k, t]) => [k, { ...t, nombre: tipoDe(ev, k)?.nombre || k, ingresaron: ingresosPorTipo[k] || 0, sinTope: t.cupo >= SIN_TOPE }])),
-      cortesias, pendientes, sinImputar, intentos, retenidas,
+      // Sin ver las cortesías, la capacidad llega sin sus lugares: los libres son los mismos.
+      tipos: Object.fromEntries(Object.entries(oc).map(([k, t]) => [k, { ...t, ...(ocultar ? { cupo: t.cupo - t.cortesias, cortesias: 0 } : {}),
+        nombre: tipoDe(ev, k)?.nombre || k, ingresaron: ingresosPorTipo[k] || 0, sinTope: t.cupo >= SIN_TOPE }])),
+      cortesias: ocultar ? 0 : cortesias, pendientes, sinImputar, intentos, retenidas,
       ordenes: Number(totales?.ordenes || 0), entradas: Number(totales?.entradas || 0),
       recaudado: Number(totales?.recaudado || 0), cobrado: Number(totales?.cobrado || 0), cargo: Number(totales?.cargo || 0),
       porDia: Object.values(porDia).sort((a, b) => b.dia.localeCompare(a.dia)),
@@ -1149,7 +1161,7 @@ app.get('/api/admin/operaciones', requireAuth(ORGANIZACION), async (req, res) =>
     const ev = eventoDe(req.query.evento) || eventoActual()
     if (!ev) return res.json({ ordenes: [], cuentas: {} })
     const filtro = String(req.query.estado || 'pagada')
-    const todas = await Orden.findAll({ where: { evento: ev.id, metodo: { [Op.notIn]: NO_VENTA } }, order: [['createdAt', 'DESC']], limit: 3000 })
+    const todas = await Orden.findAll({ where: { evento: ev.id, metodo: sinCortesias(req) }, order: [['createdAt', 'DESC']], limit: 3000 })
     const corte = new Date(Date.now() - RESERVA_MINUTOS * 60000)
     const cuentas = { pagada: 0, pagando: 0, retenida: 0, sinpagar: 0, devuelta: 0, cortesia: 0 }
     const elegidas = []
@@ -1173,7 +1185,7 @@ app.get('/api/admin/buscar', requireAuth(['admin', 'control', 'venta', 'organiza
     if (q.length < 3) return res.json({ ordenes: [] })
     const like = { [Op.like]: `%${q}%` }
     const donde = /^\d{6,9}$/.test(q) ? { dni: q } : { [Op.or]: [{ email: like }, { nombre: like }, { id: like }] }
-    const ordenes = await Orden.findAll({ where: { ...donde, estado: { [Op.in]: ['pagada', 'reversada'] }, metodo: { [Op.notIn]: NO_VENTA } }, order: [['createdAt', 'DESC']], limit: 40 })
+    const ordenes = await Orden.findAll({ where: { ...donde, estado: { [Op.in]: ['pagada', 'reversada'] }, metodo: sinCortesias(req) }, order: [['createdAt', 'DESC']], limit: 40 })
     const ing = await ingresosDe(ordenes.map(o => o.id))
     res.json({ ordenes: ordenes.map(o => filaOrden(o, ing)) })
   } catch (e) {
@@ -1186,7 +1198,7 @@ app.get('/api/admin/buscar', requireAuth(['admin', 'control', 'venta', 'organiza
 app.get('/api/admin/exportar', requireAuth(ORGANIZACION), async (req, res) => {
   try {
     const ev = eventoDe(req.query.evento)
-    const ordenes = await Orden.findAll({ where: { estado: 'pagada', metodo: { [Op.notIn]: NO_VENTA }, ...(ev ? { evento: ev.id } : {}) }, order: [['pagadaEn', 'ASC']] })
+    const ordenes = await Orden.findAll({ where: { estado: 'pagada', metodo: sinCortesias(req), ...(ev ? { evento: ev.id } : {}) }, order: [['pagadaEn', 'ASC']] })
     const ing = await ingresosDe(ordenes.map(o => o.id))
     const cols = ['id', 'fecha', 'eventoFecha', 'eventoNombre', 'tipoNombre', 'cantidad', ...(SALA ? ['butacas'] : []), 'nombre', 'email', 'dni', 'metodo', 'vendedor', 'cobro', 'pagador', 'operacion', 'subtotal', 'cargo', 'total', 'ingresadas']
     const celda = v => `"${String(v ?? '').replace(/"/g, '""')}"`
@@ -1213,12 +1225,12 @@ async function vendidasPorEvento() {
   }
   return r
 }
-app.get('/api/admin/eventos', requireAuth(ORGANIZACION), async (_req, res) => {
+app.get('/api/admin/eventos', requireAuth(ORGANIZACION), async (req, res) => {
   try {
-    const v = await vendidasPorEvento()
+    const v = await vendidasPorEvento(), ver = veCortesias(req)
     // Las reservadas no viajan al panel (ver el modelo Evento).
     res.json({ eventos: [...EVENTOS.values()].map(({ reservadas: _r, ...e }) => ({ ...e, cuando: cuandoDe(e), pasado: !noPaso(e), vendible: vendibleOnline(e),
-      vendidas: v[e.id]?.entradas || 0, cortesias: v[e.id]?.cortesias || 0, recaudado: v[e.id]?.recaudado || 0, porTipo: v[e.id]?.porTipo || {} })) })
+      vendidas: v[e.id]?.entradas || 0, cortesias: ver ? v[e.id]?.cortesias || 0 : 0, recaudado: v[e.id]?.recaudado || 0, porTipo: v[e.id]?.porTipo || {} })) })
   } catch (e) {
     console.error('❌ Error listando eventos:', e?.message || e)
     res.status(500).json({ error: 'No se pudo armar la cartelera' })
@@ -1336,8 +1348,8 @@ app.post('/api/admin/entrada-prueba', requireAuth(['admin']), async (req, res) =
   }
 })
 
-// CORTESÍA (admin y organizador: es su evento): QR real que se manda por mail. Ocupa lugar pero no es venta.
-app.post('/api/admin/entrada-cortesia', requireAuth(ORGANIZACION), async (req, res) => {
+// CORTESÍA (solo la administración, ver veCortesias): QR real que se manda por mail. Ocupa lugar pero no es venta.
+app.post('/api/admin/entrada-cortesia', requireAuth(['admin']), async (req, res) => {
   try {
     const nombre = String(req.body?.nombre || '').trim() || 'Invitación'
     const email = String(req.body?.email || '').trim().toLowerCase()
@@ -1406,7 +1418,7 @@ app.get('/api/admin/mis-ventas', requireAuth(['venta', 'admin']), async (req, re
 app.get('/api/admin/orden/:id/qrs', requireAuth(['admin', 'control', 'venta', 'organizador']), async (req, res) => {
   try {
     const orden = await Orden.findByPk(req.params.id)
-    if (!orden) return res.status(404).json({ error: 'Orden no encontrada' })
+    if (!orden || (orden.metodo === 'cortesia' && !veCortesias(req))) return res.status(404).json({ error: 'Orden no encontrada' })
     if (req.usuario.rol === 'venta' && orden.vendedor !== req.usuario.usuario) return res.status(403).json({ error: 'Sin permiso' })
     const entradas = await Entrada.findAll({ where: { orden_id: orden.id }, order: [['indice', 'ASC']] })
     res.json({ ok: true, nombre: orden.nombre, email: orden.email, dni: orden.dni, evento: orden.evento, ...nombreDe(orden), cantidad: orden.cantidad,
@@ -1423,7 +1435,7 @@ app.post('/api/admin/orden/:id/reenviar', requireAuth(['admin', 'venta', 'organi
     const email = String(req.body?.email || '').trim().toLowerCase()
     if (email.length > 120 || !/^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]{2,}$/.test(email)) return res.status(400).json({ error: 'Email inválido' })
     const orden = await Orden.findByPk(req.params.id)
-    if (!orden || orden.estado !== 'pagada') return res.status(404).json({ error: 'Orden no encontrada o sin pagar' })
+    if (!orden || orden.estado !== 'pagada' || (orden.metodo === 'cortesia' && !veCortesias(req))) return res.status(404).json({ error: 'Orden no encontrada o sin pagar' })
     if (req.usuario.rol === 'venta' && orden.vendedor !== req.usuario.usuario) return res.status(403).json({ error: 'Solo podés reenviar tus propias ventas' })
     const entradas = await Entrada.findAll({ where: { orden_id: orden.id }, order: [['indice', 'ASC']] })
     if (!entradas.length) return res.status(404).json({ error: 'La orden no tiene entradas emitidas' })
@@ -1622,8 +1634,10 @@ app.get('/api/admin/sala', requireAuth(['admin', 'organizador', 'venta', 'contro
     const veQuien = ORGANIZACION.includes(req.usuario.rol) || req.usuario.rol === 'control'
     const tomadas = await butacasTomadas(ev.id)
     const ingresos = veQuien ? new Set((await Entrada.findAll({ where: { evento: ev.id, usado: true, butaca: { [Op.ne]: null } }, attributes: ['butaca'], raw: true })).map(e => e.butaca)) : new Set()
-    const butacas = {}
+    const butacas = {}, ver = veCortesias(req)
+    let ocultas = 0
     for (const [id, o] of tomadas) {
+      if (!ver && o.metodo === 'cortesia') { butacas[id] = { estado: 'ocupada' }; ocultas++; continue }
       const estado = o.estado === 'pagada' ? (o.metodo === 'cortesia' ? 'cortesia' : 'vendida') : aTiempo(o) ? 'pagando' : 'retenida'
       butacas[id] = veQuien ? { estado, orden: o.id, nombre: o.nombre, metodo: o.metodo, vendedor: o.vendedor, entro: ingresos.has(id) } : { estado }
     }
@@ -1634,7 +1648,7 @@ app.get('/api/admin/sala', requireAuth(['admin', 'organizador', 'venta', 'contro
     for (const id of ev.bloqueadas || []) if (!butacas[id]) butacas[id] = { estado: 'bloqueada' }
     // Las que alguien tocó en la web y todavía no fue a pagar: ni la boletería ni las cortesías pueden usarlas.
     for (const id of APARTADAS.todas(ev.id)) if (!butacas[id]) butacas[id] = { estado: 'eligiendo' }
-    const total = SALA.total - resv.length
+    const total = SALA.total - resv.length - ocultas
     const cuentas = { libres: total, vendida: 0, pagando: 0, retenida: 0, eligiendo: 0, cortesia: 0, bloqueada: 0 }
     for (const b of Object.values(butacas)) if (b.estado !== 'ocupada') { cuentas[b.estado]++; cuentas.libres-- }
     res.json({ evento: ev.id, butacas, cuentas, total })
