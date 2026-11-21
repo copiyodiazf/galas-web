@@ -40,7 +40,12 @@ const { sitio: SITIO, eventos: SEMILLAS } = leerSitio(process.env.SITIO_ARCHIVO 
 // Butacas numeradas (Santiago Rítmica en el Paraninfo, 11/11/2026): con "sala" en la ficha, cada entrada es
 // una butaca que el público elige en el plano. Sin sala, todo sigue por cantidad, como en las otras galas.
 const SALA = crearSala(SITIO.sala)
-const usaSala = ev => Boolean(SALA && ev)
+// No todas las funciones de la sala tienen por qué ser numeradas (sala.funciones; sin la lista, todas). En Rítmica,
+// desde el 20/11/2026 solo la de las 16 h (José): a las 18 y a las 21 h se compra por cantidad y la ubicación es por
+// orden de llegada. La capacidad de esas funciones sigue siendo la de la sala (sus butacas de cada zona, sin las
+// guardadas ni las reservadas): la sala no cambia. SALA_FUNCIONES=* las numera todas (la prueba de las butacas).
+const FUNCIONES_NUMERADAS = process.env.SALA_FUNCIONES === '*' ? null : SALA?.funciones ? new Set(SALA.funciones) : null
+const usaSala = ev => Boolean(SALA && ev && (!FUNCIONES_NUMERADAS || FUNCIONES_NUMERADAS.has(ev.id)))
 const etiquetaDe = id => etiquetaButaca(SALA, id)
 
 const app = express()
@@ -326,7 +331,8 @@ async function ocupacion(eventoId, transaction) {
     group: ['tipo', 'estado', 'metodo'], raw: true, transaction,
   })
   // Con sala, la capacidad de cada tipo son sus butacas (sin las que se guardó el organizador), no el cupo cargado.
-  const deSala = usaSala(ev) ? cupoDeSala(SALA, ev) : null
+  // También en las funciones que no son numeradas: la sala es la misma (en Rítmica, a las 21 h, sin las 28 reservadas).
+  const deSala = SALA && ev ? cupoDeSala(SALA, ev) : null
   // Las cortesías ocupan lugar pero NO son venta (José, 19/11/2026): van aparte de las vendidas.
   const oc = Object.fromEntries((ev?.tipos || []).map(t => [t.id, { vendidas: 0, cortesias: 0, reservadas: 0, cupo: deSala ? (deSala[t.id] || 0) : t.cupo, libres: 0 }]))
   for (const f of filas) if (oc[f.tipo]) oc[f.tipo][f.estado !== 'pagada' ? 'reservadas' : f.metodo === 'cortesia' ? 'cortesias' : 'vendidas'] += Number(f.cant)
@@ -585,7 +591,9 @@ async function enviarMailEntradas(orden, entradas) {
   const puertas = ev?.puertas ? `<br>Apertura de puertas: <b>${escapeHtml(ev.puertas)}</b>` : ''
   const artistas = ev?.artistas?.length ? `<br>${escapeHtml(ev.artistas.join(' · '))}` : ''
   const sus = entradas.map(e => e.butaca).filter(Boolean)
-  const butacasTxt = sus.length ? resumenButacas(SALA, sus) : ''
+  // En una función de la sala que no es numerada, se dice que la ubicación es por orden de llegada (si no, el papá
+  // busca su butaca en el mail).
+  const butacasTxt = sus.length ? resumenButacas(SALA, sus) : SALA && ev && !usaSala(ev) ? 'Ubicación por orden de llegada' : ''
   // Pagó cuando sus butacas ya se habían vendido (la transferencia llegó tarde): se le dieron otras.
   const cambiadas = orden._butacasAntes ? `Tu pago llegó cuando las butacas que habías elegido (${resumenButacas(SALA, orden._butacasAntes.split(','))}) ya no estaban libres: te asignamos las mejores que quedaban.` : ''
 
@@ -627,7 +635,7 @@ async function enviarMailEntradas(orden, entradas) {
 
   const texto = `${invitacion ? '¡Hola' : '¡Listo'}, ${String(orden.nombre || '').split(' ')[0]}!
 
-${invitacion ? `${SITIO.organiza || SITIO.nombre} te invita` : 'Tu compra se confirmó'}: ${cuantasEntradas(orden)} · ${tipo.nombre}.${butacasTxt ? `\nButacas: ${butacasTxt}` : ''}${cambiadas ? `\n${cambiadas}` : ''}
+${invitacion ? `${SITIO.organiza || SITIO.nombre} te invita` : 'Tu compra se confirmó'}: ${cuantasEntradas(orden)} · ${tipo.nombre}.${butacasTxt ? `\n${sus.length ? 'Butacas: ' : ''}${butacasTxt}` : ''}${cambiadas ? `\n${cambiadas}` : ''}
 ${nombreEv} · ${cuando}
 ${SITIO.lugar}${SITIO.direccion ? ' · ' + SITIO.direccion : ''}
 
@@ -1246,7 +1254,7 @@ app.put('/api/admin/eventos/:id', requireAuth(ORGANIZACION), async (req, res) =>
       const nuevo = r.evento.tipos.find(x => x.id === tipo)
       const usadas = t.vendidas + t.cortesias + t.reservadas
       if (!nuevo && usadas > 0) return res.status(400).json({ error: `"${tipoDe(actual, tipo)?.nombre}" ya tiene ${usadas} entradas: no se puede sacar` })
-      if (nuevo && nuevo.cupo < usadas && !usaSala(actual)) return res.status(400).json({ error: `"${nuevo.nombre}": la capacidad no puede ser menor que las ${usadas} ya vendidas, de cortesía o reservadas` })
+      if (nuevo && nuevo.cupo < usadas && !SALA) return res.status(400).json({ error: `"${nuevo.nombre}": la capacidad no puede ser menor que las ${usadas} ya vendidas, de cortesía o reservadas` })
     }
     // Por la instancia (no Evento.update) para que artistas y tipos pasen por el setter que los guarda como JSON.
     const fila = await Evento.findByPk(actual.id)
@@ -1709,7 +1717,9 @@ async function estadosDeTipos() {
   for (const ev of EVENTOS.values()) {
     if (!Number(ev.publicado) || !noPaso(ev)) continue
     const oc = await ocupacion(ev.id)
-    v[ev.id] = Object.fromEntries(Object.entries(oc).map(([k, t]) => [k, t.libres <= 0 ? 'agotado' : t.libres <= POCAS ? 'pocas' : 'disponible']))
+    // "Quedan pocas" también según el tamaño del tipo: con 30 de tope, la zona verde de Rítmica (16 lugares) decía
+    // "quedan pocas" sin haber vendido ninguna, y en las funciones por cantidad se ve en la tarjeta (20/11/2026).
+    v[ev.id] = Object.fromEntries(Object.entries(oc).map(([k, t]) => [k, t.libres <= 0 ? 'agotado' : t.libres <= Math.min(POCAS, Math.ceil(t.cupo / 4)) ? 'pocas' : 'disponible']))
   }
   _ocCache = { t: Date.now(), v }
   return v
@@ -1726,7 +1736,7 @@ app.get('/api/config', async (_req, res) => {
     eventos: [...EVENTOS.values()].filter(e => Number(e.publicado) && noPaso(e)).map(e => ({
       id: e.id, nombre: e.nombre, subtitulo: e.subtitulo, fecha: e.fecha, hora: e.hora, cuando: cuandoDe(e), puertas: e.puertas,
       artistas: e.artistas, descripcion: e.descripcion, imagen: e.imagen, nota: e.nota, vendible: online && vendibleOnline(e),
-      ventaHasta: e.ventaHasta || null,
+      ventaHasta: e.ventaHasta || null, ...(SALA ? { numerada: usaSala(e) } : {}),
       externo: e.externoUrl || e.externoPrecio || e.externoTexto ? { url: e.externoUrl, texto: e.externoTexto, precio: e.externoPrecio } : null,
       // final = lo que paga hoy el público. etapas = el calendario de precios (finales), para mostrarlo;
       // finalDespues = el precio cuando terminan las etapas (por ejemplo, en puerta).
@@ -1742,7 +1752,7 @@ app.get('/api/admin/config', requireAuth(['admin', 'control', 'venta', 'organiza
   res.json({ cargoPuntoPct: CARGO_PUNTO_PCT, actual: eventoActual()?.id || null, sandbox: !chytapayEsProduccion(), precioIncluyeCargo: SITIO.precioIncluyeCargo, modo: SITIO.modo,
     sala: SITIO.sala || null,
     // unidadPunto: lo que cobra la boletería por entrada hoy (mismo cálculo que el servidor).
-    eventos: [...EVENTOS.values()].map(e => ({ id: e.id, nombre: e.nombre, fecha: e.fecha, cuando: cuandoDe(e), pasado: !noPaso(e),
+    eventos: [...EVENTOS.values()].map(e => ({ id: e.id, nombre: e.nombre, fecha: e.fecha, cuando: cuandoDe(e), pasado: !noPaso(e), ...(SALA ? { numerada: usaSala(e) } : {}),
       tipos: e.tipos.map(t => ({ ...t, unidadPunto: finalDe(precioVigente(t), CARGO_PUNTO_PCT) })) })) })
 })
 
@@ -1759,7 +1769,7 @@ app.get('/health', (_req, res) => res.send(`Backend ${SITIO.nombre} ✅`))
 app.listen(PORT, () => {
   console.log(`🚀 ${SITIO.nombre} (tema ${TEMA}): puerto ${PORT}`)
   if (!chytapayConfigurado()) console.warn('⚠️ Faltan datos de Chytapay (CHYTAPAY_*): la venta online queda cerrada')
-  console.log(`💳 Chytapay [${chytapayEsProduccion() ? 'PRODUCCIÓN' : 'sandbox'}] · cargo ${CARGO_PCT}% online, ${CARGO_PUNTO_PCT}% en puntos · reserva ${RESERVA_MINUTOS} min${SALA ? ` · butacas apartadas ${APARTAR_MINUTOS} min al tocarlas` : ''} · venta ${VENTA_ABIERTA ? 'ABIERTA' : 'cerrada'}`)
+  console.log(`💳 Chytapay [${chytapayEsProduccion() ? 'PRODUCCIÓN' : 'sandbox'}] · cargo ${CARGO_PCT}% online, ${CARGO_PUNTO_PCT}% en puntos · reserva ${RESERVA_MINUTOS} min${SALA ? ` · butacas apartadas ${APARTAR_MINUTOS} min al tocarlas · numeradas: ${FUNCIONES_NUMERADAS ? [...FUNCIONES_NUMERADAS].join(', ') || 'ninguna' : 'todas'}` : ''} · venta ${VENTA_ABIERTA ? 'ABIERTA' : 'cerrada'}`)
 })
 
 // ═══════════════════════════════════════════════════════════════

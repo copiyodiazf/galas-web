@@ -142,6 +142,9 @@ function salaDe(s) {
     escenario: limpio(s.escenario, 40) || 'Escenario',
     asiento1: s.asiento1 === 'izquierda' ? 'izquierda' : 'derecha',
     nota: limpio(s.nota, 300) || null,
+    // Las funciones con butacas numeradas (ids de evento). Sin la lista, todas. Las demás de la misma sala se venden
+    // por cantidad y la ubicación es por orden de llegada (Rítmica, 20/11/2026: solo la de las 16 h es numerada).
+    funciones: Array.isArray(s.funciones) ? s.funciones.map(x => limpio(x, 60)).filter(Boolean) : null,
     filas,
     total: filas.reduce((a, f) => a + f.asientos, 0),
   }

@@ -43,6 +43,9 @@
     "escenario": "Escenario",
     "asiento1": "derecha",
     "nota": "Los números de cada fila empiezan del lado derecho, mirando hacia el escenario.",
+    "funciones": [
+      "divas-del-pop"
+    ],
     "filas": [
       {
         "fila": "1",
@@ -163,7 +166,7 @@
           "id": "platea",
           "nombre": "Platea",
           "corto": "Platea",
-          "detalle": "Filas 1 a 13 · butaca numerada",
+          "detalle": "Filas 1 a 13 · por orden de llegada",
           "precio": 20000,
           "cupo": 321
         },
@@ -171,7 +174,7 @@
           "id": "zona-verde",
           "nombre": "Zona verde",
           "corto": "Zona verde",
-          "detalle": "Fila 14, al fondo, detrás de la cabina",
+          "detalle": "Fila 14, al fondo · por orden de llegada",
           "precio": 10000,
           "cupo": 16
         }
@@ -192,7 +195,7 @@
           "id": "platea",
           "nombre": "Platea",
           "corto": "Platea",
-          "detalle": "Filas 1 a 13 · butaca numerada",
+          "detalle": "Filas 1 a 13 · por orden de llegada",
           "precio": 20000,
           "cupo": 321
         },
@@ -200,7 +203,7 @@
           "id": "zona-verde",
           "nombre": "Zona verde",
           "corto": "Zona verde",
-          "detalle": "Fila 14, al fondo, detrás de la cabina",
+          "detalle": "Fila 14, al fondo · por orden de llegada",
           "precio": 10000,
           "cupo": 16
         }

@@ -342,6 +342,14 @@ let S = JSON.parse(localStorage.getItem('gala_sesion') || 'null');
 let PUERTA = '';                    // tipo que controla la puerta ('' = todos)
 let CFG = null, EVA = localStorage.getItem('gala_evento') || null, P_TIPO = null, C_TIPO = null;
 const evElegido = () => CFG?.eventos.find(e => e.id === EVA) || null;
+// La sala de la función elegida: null si la gala no tiene sala o si esa función no es numerada (Rítmica, 20/11/2026:
+// solo la de las 16 h; a las 18 y a las 21 h la ubicación es por orden de llegada y se vende por cantidad).
+const SALA_EV = () => CFG?.sala && evElegido()?.numerada !== false ? CFG.sala : null;
+// La pestaña Sala y la cortesía siguen a la función elegida: con plano, la cortesía se da desde el plano.
+function ajustarSala() {
+  const tab = $('#tabs [data-t="sala"]'); if (tab) tab.hidden = !SALA_EV();
+  $('#c-con-sala').hidden = !SALA_EV(); $('#c-sin-sala').hidden = Boolean(SALA_EV());
+}
 const etq = t => `<span class="etq">${esc(t)}</span>`;
 
 async function api(url, opciones = {}) {
@@ -388,7 +396,10 @@ async function cargarCfg() {
   if (CFG.precioIncluyeCargo) $('#ayuda-precio').textContent = 'El precio es el FINAL, lo que paga el público (el servicio va adentro: el organizador recibe el precio ÷ 1,10).';
   pintarSelectores();
 }
-$('#sel-evento').addEventListener('change', e => { EVA = e.target.value; localStorage.setItem('gala_evento', EVA); PUERTA = ''; pintarSelectores(); abrir(PEST); });
+$('#sel-evento').addEventListener('change', e => { EVA = e.target.value; localStorage.setItem('gala_evento', EVA); PUERTA = ''; pintarSelectores();
+  // En una función sin numerar no hay plano: de la pestaña Sala se pasa a la primera que haya.
+  if (PEST === 'sala' && !SALA_EV()) PEST = $('#tabs button:not([hidden])')?.dataset.t || PEST;
+  abrir(PEST); });
 async function armar() {
   $('#v-login').hidden = true; $('#v-panel').hidden = false;
   $('#quien').textContent = S.nombre || S.usuario;
@@ -402,9 +413,9 @@ async function armar() {
   if (CFG?.sala && ['admin', 'organizador', 'control'].includes(S.rol)) pestanas.splice(1, 0, ['sala', 'Sala']);
   $('#tabs').innerHTML = pestanas.map(([k, t]) => `<button data-t="${k}">${t}</button>`).join('');
   $$('#tabs button').forEach(b => b.onclick = () => abrir(b.dataset.t));
-  $('#c-con-sala').hidden = !CFG?.sala; $('#c-sin-sala').hidden = Boolean(CFG?.sala);
+  ajustarSala();
   if (CFG?.modo === 'gala' && S.rol === 'organizador') $('#tabs [data-t="cartelera"]')?.remove();
-  abrir(pestanas[0][0]);
+  abrir(pestanas.find(([k]) => k !== 'sala' || SALA_EV())[0]);
   avisoChytapay();
 }
 function abrir(t) {
@@ -419,7 +430,7 @@ function abrir(t) {
   if (t === 'ventas' && VE_TODO() && !$('#buscar').value) cargarOperaciones();
   if (t === 'cartelera') cargarCartelera();
   if (t === 'puerta') pintarPuerta();
-  if (t === 'punto') { cargarMisVentas(); if (CFG?.sala) cargarPuntoSala(); }
+  if (t === 'punto') { cargarMisVentas(); if (SALA_EV()) cargarPuntoSala(); }
   if (t === 'sala') cargarSala();
   if (t === 'herramientas') { cargarSinImputar(); if (ES_ADMIN()) estadoChytapay(); }
 }
@@ -446,7 +457,7 @@ async function cargarResumen() {
       return `<div class="noche"><h3>${esc(n.nombre)}</h3>
         <div class="barra-cupo"><i style="width:${v}%;background:var(--oro)"></i><i style="width:${c}%;background:#7c6cf0"></i><i style="width:${r}%;background:rgba(231,194,125,.4)"></i></div>
         <p style="font-size:14px;"><b style="font-size:20px">${n.vendidas.toLocaleString('es-AR')}</b> de ${n.cupo.toLocaleString('es-AR')} vendidas${deCortesia} · <b>${n.libres.toLocaleString('es-AR')}</b> libres</p>
-        <p class="ayuda">${n.reservadas} ${CFG?.sala ? 'sin pagar todavía (pagándose o vencidas con la butaca guardada)' : 'pagando ahora'} · ingresaron ${n.ingresaron.toLocaleString('es-AR')}</p></div>`;
+        <p class="ayuda">${n.reservadas} ${SALA_EV() ? 'sin pagar todavía (pagándose o vencidas con la butaca guardada)' : 'pagando ahora'} · ingresaron ${n.ingresaron.toLocaleString('es-AR')}</p></div>`;
     }).join('') || '<p class="ayuda">Esta fecha todavía no tiene entradas cargadas (Cartelera → Editar).</p>';
     const cifra = ([b, s, clase = '', ir = '']) => `<div class="cifra ${clase}"${ir ? ` style="cursor:pointer" onclick="${ir}"` : ''}><b>${b}</b><span>${s}</span></div>`;
     $('#r-cifras').innerHTML = [
@@ -640,6 +651,7 @@ async function borrarEvento() {
 
 // ── Selectores de tipo (puerta, punto de venta y cortesía), de la fecha elegida ──
 function pintarSelectores() {
+  ajustarSala();
   const ev = evElegido(), tipos = ev?.tipos || [];
   if (!tipos.find(t => t.id === P_TIPO)) P_TIPO = tipos[0]?.id || null;
   if (!tipos.find(t => t.id === C_TIPO)) C_TIPO = tipos[0]?.id || null;
@@ -660,7 +672,7 @@ function pintarPuerta() {
   $$('#sel-puerta button').forEach(b => b.onclick = () => { PUERTA = b.dataset.p; pintarPuerta(); });
 }
 function totalPunto() {
-  const conSala = Boolean(CFG?.sala);
+  const conSala = Boolean(SALA_EV());
   $('#p-sala').hidden = !conSala; $('#p-tipos').hidden = conSala; $('#p-caja-cant').hidden = conSala;
   if (conSala) {
     const ids = (evElegido()?.tipos || []).map(t => t.id);
@@ -682,10 +694,10 @@ $('#f-punto').addEventListener('submit', async ev => {
   const err = $('#p-err'); err.style.display = 'none';
   const b = ev.target.querySelector('button[type=submit]'); b.disabled = true;
   try {
-    if (CFG?.sala && !P_ELEGIDAS.length) throw new Error('Tocá en el plano las butacas que se lleva.');
+    if (SALA_EV() && !P_ELEGIDAS.length) throw new Error('Tocá en el plano las butacas que se lleva.');
     const d = await api('/api/admin/venta-punto', { method: 'POST', body: JSON.stringify({ evento: EVA, tipo: P_TIPO, cantidad: +$('#p-cant').value, cobro: $('#p-cobro').value,
-      nombre: $('#p-nombre').value, email: $('#p-email').value, dni: $('#p-dni').value, ...(CFG?.sala ? { butacas: P_ELEGIDAS } : {}) }) })
-      .catch(e => { if (CFG?.sala) cargarPuntoSala(); throw e; });
+      nombre: $('#p-nombre').value, email: $('#p-email').value, dni: $('#p-dni').value, ...(SALA_EV() ? { butacas: P_ELEGIDAS } : {}) }) })
+      .catch(e => { if (SALA_EV()) cargarPuntoSala(); throw e; });
     ORDEN = { id: d.ordenId };
     $('#mq-tit').textContent = `Venta registrada · ${pesos(d.total)}`;
     $('#mq-sub').textContent = 'Las entradas también le llegaron al mail. Puede escanear estos QR ahora mismo.';
@@ -693,7 +705,7 @@ $('#f-punto').addEventListener('submit', async ev => {
     $('#mq-ingreso').hidden = true; $('#mq-email').value = $('#p-email').value; $('#mq-msg').innerHTML = '';
     $('#m-qr').classList.add('abierto');
     ['#p-nombre', '#p-email', '#p-dni'].forEach(s => $(s).value = ''); $('#p-cant').value = 1; P_ELEGIDAS = [];
-    if (CFG?.sala) cargarPuntoSala(); totalPunto();
+    if (SALA_EV()) cargarPuntoSala(); totalPunto();
     cargarMisVentas();
   } catch (x) { err.textContent = x.message; err.style.display = 'block'; }
   b.disabled = false;
@@ -718,7 +730,7 @@ function estadoSala(id) {
   return c;
 }
 async function cargarSala() {
-  if (!CFG?.sala || !EVA) return;
+  if (!SALA_EV() || !EVA) return;
   try {
     S_DATOS = await api('/api/admin/sala?evento=' + encodeURIComponent(EVA));
     if (!S_PLANO || S_EV !== EVA) {
@@ -796,7 +808,7 @@ async function cortesiaSala() {
 // Boletería con butacas: el vendedor marca en el plano las que se lleva (solo ve libres u ocupadas).
 let P_PLANO = null, P_EV = null, P_OCUP = {}, P_ELEGIDAS = [];
 async function cargarPuntoSala() {
-  if (!CFG?.sala || !EVA) return;
+  if (!SALA_EV() || !EVA) return;
   try {
     P_OCUP = (await api('/api/admin/sala?evento=' + encodeURIComponent(EVA))).butacas || {};
     P_ELEGIDAS = P_ELEGIDAS.filter(id => !P_OCUP[id]);

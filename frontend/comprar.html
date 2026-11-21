@@ -212,8 +212,8 @@ function pintarFechas() {
     const tipos = Object.values(e.tipos), precios = tipos.map(aMostrar);
     // Con butacas, el precio del primer tipo (la platea, la zona principal): "desde $10.000" era la última fila
     // (Rítmica, 13/11/2026). Sin sala, como siempre: el más barato, con "desde" si hay varios.
-    const desde = SALA() ? precios[0] : Math.min(...precios);
-    const varios = !SALA() && new Set(precios).size > 1;
+    const desde = CFG.sitio.sala ? precios[0] : Math.min(...precios);
+    const varios = !CFG.sitio.sala && new Set(precios).size > 1;
     return `<label class="tipo"><input type="radio" name="fecha" value="${esc(e.id)}">
       <span class="talon"><small>${esc(mes)}</small><b>${esc(dia)}</b></span>
       <span class="que"><b>${esc(e.nombre)}</b><small>${esc(e.artistas?.join(', ') || e.cuando)}</small></span>
@@ -222,7 +222,9 @@ function pintarFechas() {
   document.querySelectorAll('input[name=fecha]').forEach(r => r.addEventListener('change', () => { EV = CFG.eventos.find(e => e.id === r.value); tipo = null; pintarFechas(); pintarTipos(); actualizar(); }));
 }
 // ── Butacas numeradas (la ficha trae "sala"): se eligen en el plano; la cantidad y el tipo salen de ellas ──
-const SALA = () => CFG?.sitio?.sala || null;
+// No todas las funciones de la sala son numeradas (Rítmica, 20/11/2026: solo la de las 16 h). En las otras se compra
+// por cantidad, como en cualquier gala, y la ubicación es por orden de llegada.
+const SALA = (ev = EV) => (ev && ev.numerada === false) ? null : CFG?.sitio?.sala || null;
 let ELEGIDAS = [], OCUPADAS = new Set(), PLANO = null, PLANO_EV = null, MIA = null;   // MIA = la compra sin pagar de este navegador
 // La butaca es del primero que la toca (Rítmica, 19/11/2026): al tocarla se aparta en el servidor a nombre de este
 // navegador (CLIENTE) por unos minutos, mientras completa los datos. PIDIENDO: tocadas, esperando la respuesta.
@@ -262,7 +264,17 @@ function pintarSala() {
   document.body.classList.toggle('con-sala', conSala);
   $('#caja-sala').hidden = !conSala; $('#tipos').hidden = conSala; $('#caja-cantidad').hidden = conSala;
   $('#t-entradas').textContent = conSala ? 'Elegí tus butacas' : 'Tus entradas';
-  if (!conSala) return;
+  if (!conSala) {
+    // Pasó de la función numerada a una que no lo es: lo que había apartado en el plano se suelta para los demás,
+    // y vuelve a contar entradas (con el plano, la cantidad eran las butacas elegidas y podía estar en 0).
+    if (PLANO_EV && EV) {
+      if (propias().length) soltarTodo(PLANO_EV);
+      PLANO_EV = null; PLANO = null; ELEGIDAS = []; PIDIENDO = new Set(); APARTADO_HASTA = 0; MIA = null;
+      $('#plano').innerHTML = ''; avisoSala('');
+    }
+    if (EV && cant < 1) cant = 1;
+    return;
+  }
   $('#max-sala').textContent = CFG.maxEntradas;
   // Precio de cada zona (si todas las butacas son del mismo tipo, un solo renglón).
   const zonas = new Map();
@@ -389,9 +401,22 @@ async function cargarOcupadas() {
 // butacas apartadas al tocarlas, lo que eligen los demás tiene que verse enseguida.
 setInterval(() => { if (SALA() && EV && !document.hidden && !$('#pagar').disabled) cargarOcupadas(); }, 8000);
 
+// Con butacas, una hora para transferir (José, 19/11/2026: en la gala de patín una transferencia tardó casi una hora),
+// y si el banco tarda más, las butacas no se sueltan solas: las guarda hasta que la organización revisa el caso.
+// Depende de la función: en una de la sala que no es numerada no hay butacas que guardar.
+function pintarReserva() {
+  const m = CFG.reservaMinutos, plazo = m === 60 ? 'una hora' : m + ' minutos';
+  $('#reserva').textContent = SALA()
+    ? `Al tocar «Ir a pagar» tenés ${plazo} para transferir. Si tu banco tarda más, no transfieras de nuevo: tus butacas siguen guardadas a tu nombre y las entradas te llegan apenas entre la plata.`
+    : CFG.sitio.sala ? `Al tocar «Ir a pagar» tenés ${plazo} para transferir y te guardamos el lugar mientras tanto. La ubicación en la sala es por orden de llegada.`
+    : `Te guardamos el lugar ${m} minutos mientras pagás.`;
+}
 function pintarTipos() {
+  pintarReserva();
   if (!EV) { $('#tipos').innerHTML = '<p class="ayuda">Primero elegí la fecha.</p>'; pintarSala(); return; }
-  if (SALA()) return pintarSala();
+  // También en una función sin numerar: esconde el plano y suelta lo que había apartado en la numerada.
+  pintarSala();
+  if (SALA()) return;
   const [mes, dia] = talon(EV);
   $('#tipos').innerHTML = Object.entries(EV.tipos).map(([k, t]) => {
     const agotado = t.estado === 'agotado';
@@ -608,11 +633,6 @@ fetch('/api/config').then(r => r.json()).then(c => {
   if (EN_APP) { $('#en-app').hidden = false; $('#en-app-sala').hidden = false; }
   if (c.apartarMinutos) $('#min-apartado').textContent = ` ${c.apartarMinutos} minutos`;
   EV = lista.find(e => e.id === pedidoEvento) || (lista.length === 1 ? lista[0] : null);
-  // Con butacas, una hora para transferir (José, 19/11/2026: en la gala de patín una transferencia tardó casi una hora),
-  // y si el banco tarda más, las butacas no se sueltan solas: las guarda hasta que la organización revisa el caso.
-  $('#reserva').textContent = c.sitio.sala
-    ? `Al tocar «Ir a pagar» tenés ${c.reservaMinutos === 60 ? 'una hora' : c.reservaMinutos + ' minutos'} para transferir. Si tu banco tarda más, no transfieras de nuevo: tus butacas siguen guardadas a tu nombre y las entradas te llegan apenas entre la plata.`
-    : `Te guardamos el lugar ${c.reservaMinutos} minutos mientras pagás.`;
   pintarFechas(); pintarTipos(); actualizar();
 }).catch(() => error('No pudimos cargar los precios. Revisá tu conexión y recargá la página.'));
 </script>
