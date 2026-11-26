@@ -1,0 +1,18 @@
+/* Tema del Show de Fin de Año de EPA (Villa Carlos Paz, 21/11/2026): "Sé la princesa que quieras ser". Los colores del
+   logo oficial (azul francia y rosa, con el dorado de las estrellitas) sobre la noche azul de la portada. Montserrat,
+   la letra del logo, para títulos y texto. La compra, el panel y los mails. */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap');
+:root{
+  --noche:#050e45; --noche-2:#0a1872; --noche-3:#14258f; --oro:#ff8fc4; --oro-vivo:#ffd1e7; --crema:#f4f6ff;
+  --gris:#b8c2f2; --tierra:#ff4fa3;
+  --oro-degrade:linear-gradient(180deg,#ffd1e7,#ff8fc4 55%,#ff4fa3);
+  --f-display:'Montserrat',system-ui,sans-serif; --f-texto:'Montserrat',system-ui,sans-serif;
+}
+body{background:radial-gradient(ellipse 80% 45% at 15% 0%,rgba(255,79,163,.22),transparent 70%),
+                radial-gradient(ellipse 80% 45% at 90% 10%,rgba(26,60,240,.35),transparent 70%),var(--noche);}
+h1{font-weight:900;letter-spacing:-.02em;}
+.tarjeta{background:linear-gradient(180deg,rgba(20,37,143,.92),rgba(10,24,114,.94));border-color:rgba(255,143,196,.24);}
+.btn{color:#fff;background:linear-gradient(135deg,#ff6cb5,#ff4fa3 45%,#d42b84);box-shadow:0 10px 26px rgba(255,79,163,.35);}
+.paso span{color:#fff;background:linear-gradient(135deg,#ff4fa3,#3b5bff);}
+th{background:rgba(10,24,114,.97) !important;}
+.cabeza img{background:#fff;}

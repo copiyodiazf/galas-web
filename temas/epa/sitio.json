@@ -1,0 +1,47 @@
+{
+  "nombre": "Sé la Princesa · Show EPA 2026",
+  "lema": "Escuela de Patín Artístico",
+  "organiza": "EPA · Escuela de Patín Artístico",
+  "lugar": "Estadio Arena",
+  "direccion": "Villa Carlos Paz, Córdoba",
+  "ciudad": "Villa Carlos Paz",
+  "instagram": "epa_escuela_de_patin_artistico",
+  "mail": {
+    "encabezado": "#050e45",
+    "sobrecabeza": "#ffd1e7",
+    "acento": "#ff4fa3",
+    "acentoTexto": "#ffffff",
+    "titulos": "#1a3cf0",
+    "franja": [
+      "#1a3cf0",
+      "#ff4fa3",
+      "#f4c14d",
+      "#8b6cf0",
+      "#ffd1e7"
+    ]
+  },
+  "festejo": {
+    "*": [
+      "#1a3cf0",
+      "#ff4fa3",
+      "#ffd1e7",
+      "#f4c14d",
+      "#8b6cf0",
+      "#ffffff"
+    ]
+  },
+  "modo": "gala",
+  "eventos": [
+    {
+      "id": "2026-12-13-se-la-princesa",
+      "nombre": "Sé la princesa que quieras ser",
+      "subtitulo": "Show de Fin de Año · EPA Escuela de Patín Artístico",
+      "fecha": "2026-12-13",
+      "puertas": "",
+      "imagen": "/assets/arte/arte-princesas-600.webp",
+      "publicado": true,
+      "artistas": [],
+      "tipos": []
+    }
+  ]
+}
