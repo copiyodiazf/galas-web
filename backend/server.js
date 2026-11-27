@@ -109,7 +109,10 @@ const ORGANIZACION = ['admin', 'organizador']          // ven resumen, ventas, p
 // no las ven en ningún listado, búsqueda, planilla ni cuenta: ocupan lugar igual, pero a ellos la capacidad les llega
 // ya sin esos lugares (como las reservadas) y en el plano son butacas ocupadas, sin nombre. En la puerta, el QR de una
 // cortesía vale y se ve como el de cualquier entrada.
-const veCortesias = req => req.usuario?.rol === 'admin'
+// Excepción por gala: con "cortesiasOrganizador": true en su sitio.json, el organizador también las emite y las ve
+// (El Quinto Elemento, José 27/11/2026: Flor da las suyas). La puerta y la boletería, nunca.
+const ROLES_CORTESIA = SITIO.cortesiasOrganizador ? ['admin', 'organizador'] : ['admin']
+const veCortesias = req => ROLES_CORTESIA.includes(req.usuario?.rol)
 const sinCortesias = req => ({ [Op.notIn]: veCortesias(req) ? NO_VENTA : [...NO_VENTA, 'cortesia'] })
 
 const EVENTO_MAIL_FROM = process.env.EVENTO_MAIL_FROM || 'entradas@ejemplo.com.ar'
@@ -662,6 +665,95 @@ N° de compra: ${orden.id}`
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  MAIL DE BIENVENIDA del día del show (EPA, 27/11/2026): cuando en la puerta escanean la primera entrada de una
+//  compra, al comprador le llega un saludo con su nombre, unas palabras del show y el cronograma (sitio.json →
+//  "bienvenida" y "cronograma"). Sin "bienvenida" en la ficha, no se manda nada.
+// ═══════════════════════════════════════════════════════════════
+// El primer nombre como se escribe ("MARÍA JOSÉ" o "maría" → "María"): el mail lo saluda por su nombre.
+function nombreLindo(n) {
+  const p = String(n || '').trim().split(/\s+/)[0] || ''
+  return p === p.toUpperCase() || p === p.toLowerCase() ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : p
+}
+function cronogramaMailHtml() {
+  const c = SITIO.cronograma
+  if (!c) return ''
+  // El saludo final (un solo "número" sin numerar) va con su hora en el color de los títulos: cierra el cronograma
+  const bloques = c.bloques.map(b => { const final = b.numeros.length === 1 && !b.numeros[0].n; return `
+        <tr><td style="padding:0 0 10px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f4fb;border-radius:12px;">
+            <tr>
+              <td width="74" valign="top" style="padding:14px 0 12px 12px;">
+                <div style="background:${final ? MC.titulos : MC.acento};color:${final ? '#ffffff' : MC.acentoTexto};font:800 14px/1 Arial,sans-serif;padding:8px 0;border-radius:999px;text-align:center;">${escapeHtml(b.hora)}</div>
+              </td>
+              <td valign="top" style="padding:10px 14px 8px 12px;">
+                ${b.numeros.map(x => `<div style="padding:4px 0 6px;">
+                  <div style="font:700 15px/1.35 Arial,sans-serif;color:#1d1830;">${x.n ? `<span style="color:${MC.titulos};">${x.n}.</span> ` : ''}${escapeHtml(x.titulo)}</div>
+                  ${x.grupo || x.sede ? `<div style="font:400 13px/1.4 Arial,sans-serif;color:#6f6886;">${escapeHtml([x.grupo, x.sede].filter(Boolean).join(' · '))}</div>` : ''}
+                </div>`).join('')}
+              </td>
+            </tr>
+          </table>
+        </td></tr>` }).join('')
+  return `
+      <tr><td style="padding:22px 26px 0;">
+        <div style="font:800 12px/1.2 Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:${MC.titulos};margin-bottom:10px;">${escapeHtml(c.titulo)}</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${bloques}</table>
+      </td></tr>`
+}
+const cronogramaMailTexto = () => !SITIO.cronograma ? '' : `${SITIO.cronograma.titulo.toUpperCase()}\n` + SITIO.cronograma.bloques.map(b =>
+  b.numeros.map(x => `${b.hora} · ${x.n ? x.n + '. ' : ''}${x.titulo}${x.grupo || x.sede ? ` (${[x.grupo, x.sede].filter(Boolean).join(' · ')})` : ''}`).join('\n')).join('\n')
+
+async function enviarMailBienvenida(orden) {
+  const b = SITIO.bienvenida
+  const t = await getTransporter()
+  const ev = eventoDe(orden.evento)
+  const nombre = nombreLindo(orden.nombre)
+  const conNombre = s => escapeHtml(s).replaceAll('{nombre}', escapeHtml(nombre))
+  const instagram = SITIO.instagram ? `
+      <tr><td align="center" style="padding:20px 26px 0;">
+        <a href="https://www.instagram.com/${encodeURIComponent(SITIO.instagram)}/" style="display:inline-block;${botonMail}font:800 14px/1 Arial,sans-serif;padding:13px 26px;border-radius:999px;">Compartí la noche en Instagram</a>
+      </td></tr>` : ''
+  const html = `
+  <div style="background:#f1eef5;padding:22px 12px;font-family:Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;margin:auto;background:#ffffff;border-radius:16px;overflow:hidden;">
+      ${encabezadoMail(ev)}
+      <tr><td style="padding:26px 26px 0;">
+        <div style="font:800 24px/1.3 Arial,sans-serif;color:#1d1830;">${conNombre(b.titulo)}</div>
+        ${b.parrafos.map(p => `<p style="font:400 15px/1.65 Arial,sans-serif;color:#3a334d;margin:12px 0 0;">${conNombre(p)}</p>`).join('')}
+      </td></tr>
+      ${cronogramaMailHtml()}
+      ${b.cierre ? `<tr><td style="padding:12px 26px 0;"><p style="font:700 15px/1.6 Arial,sans-serif;color:#1d1830;margin:0;">${conNombre(b.cierre)}</p>${b.firma ? `<p style="font:400 14px/1.5 Arial,sans-serif;color:#6f6886;margin:6px 0 0;">${conNombre(b.firma)}</p>` : ''}</td></tr>` : ''}
+      ${instagram}
+      <tr><td align="center" style="padding:22px 26px 26px;">
+        <div style="font:400 12px/1.6 Arial,sans-serif;color:#7d7590;">${escapeHtml(SITIO.nombre)}${SITIO.lema ? ' · ' + escapeHtml(SITIO.lema) : ''}</div>
+      </td></tr>
+    </table>
+  </div>`
+  const conNombreTxt = s => s.replaceAll('{nombre}', nombre)
+  const texto = [conNombreTxt(b.titulo), ...b.parrafos.map(conNombreTxt), cronogramaMailTexto(), b.cierre ? conNombreTxt(b.cierre) : '', b.firma ? conNombreTxt(b.firma) : '']
+    .filter(Boolean).join('\n\n')
+  const info = await t.sendMail({ from: remitente(), to: orden.email, subject: conNombreTxt(b.asunto), text: texto, html, attachments: adjuntoLogo() })
+  const vista = nodemailer.getTestMessageUrl(info)
+  console.log(vista ? `💌 Bienvenida (vista previa): ${vista}` : `💌 Bienvenida enviada a ${orden.email}`)
+}
+
+// La manda el que logra marcar la compra (atómico): con cuatro QR escaneados a la vez, sale una sola. Va en segundo
+// plano, así la puerta no espera al correo. Si el envío falla, se desmarca y sale con la próxima entrada que pase.
+async function darBienvenida(orden) {
+  if (!SITIO.bienvenida || !orden?.email) return
+  try {
+    const [marcada] = await Orden.update({ bienvenidaEn: new Date() }, { where: { id: orden.id, bienvenidaEn: null } })
+    if (!marcada) return
+    try { await enviarMailBienvenida(orden) } catch (e) {
+      await Orden.update({ bienvenidaEn: null }, { where: { id: orden.id } }).catch(() => {})
+      throw e
+    }
+  } catch (e) {
+    console.error(`⚠️ No se pudo mandar la bienvenida de ${orden.id}:`, e?.message || e)
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  EMITIR LAS ENTRADAS de una orden ya pagada (un QR por entrada)
 // ═══════════════════════════════════════════════════════════════
 async function emitirEntradas(orden, { mandarMail = true } = {}) {
@@ -1025,6 +1117,7 @@ app.post('/api/validar', rateLimit({ windowMs: 60000, max: 1500 }), async (req, 
       const ya = await Entrada.findByPk(entrada.id)
       return res.json({ ok: false, estado: 'usado', msg: 'Ya ingresó', cuando: ya?.usadoEn, ...extra })
     }
+    darBienvenida(orden)   // sin esperar: el mail del día del show (si la ficha lo tiene), una vez por compra
     return res.json({ ok: true, estado: 'valido', msg: orden.metodo === 'prueba' ? 'PRUEBA · Ingreso OK' : 'Ingreso OK', ...extra })
   } catch (e) {
     console.error('❌ Error validando:', e?.message || e)
@@ -1348,8 +1441,9 @@ app.post('/api/admin/entrada-prueba', requireAuth(['admin']), async (req, res) =
   }
 })
 
-// CORTESÍA (solo la administración, ver veCortesias): QR real que se manda por mail. Ocupa lugar pero no es venta.
-app.post('/api/admin/entrada-cortesia', requireAuth(['admin']), async (req, res) => {
+// CORTESÍA (la administración y, si la gala lo habilita, el organizador: ver veCortesias): QR real que se manda por
+// mail. Ocupa lugar pero no es venta.
+app.post('/api/admin/entrada-cortesia', requireAuth(ROLES_CORTESIA), async (req, res) => {
   try {
     const nombre = String(req.body?.nombre || '').trim() || 'Invitación'
     const email = String(req.body?.email || '').trim().toLowerCase()
@@ -1458,6 +1552,7 @@ app.post('/api/admin/orden/:id/ingresar', requireAuth(['admin', 'control', 'orga
     if (ev && orden.evento !== ev.id) return res.status(400).json({ error: `Son entradas para ${eventoDe(orden.evento)?.nombre || 'otra fecha'}: hoy no valen` })
     const [marcadas] = await Entrada.update({ usado: true, usadoEn: new Date() }, { where: { orden_id: orden.id, usado: false } })
     console.log(`🚪 Ingreso manual ${orden.id}: ${marcadas} (por ${req.usuario.usuario})`)
+    if (marcadas) darBienvenida(orden)
     res.json({ ok: true, marcadas, total: orden.cantidad, nombre: orden.nombre })
   } catch (e) {
     console.error('❌ Error en ingreso manual:', e?.message || e)
@@ -1762,9 +1857,9 @@ app.get('/api/config', async (_req, res) => {
 })
 // Para el panel: todos los eventos (también los no publicados) con sus tipos, para la puerta,
 // la boletería y las cortesías.
-app.get('/api/admin/config', requireAuth(['admin', 'control', 'venta', 'organizador']), (_req, res) => {
+app.get('/api/admin/config', requireAuth(['admin', 'control', 'venta', 'organizador']), (req, res) => {
   res.json({ cargoPuntoPct: CARGO_PUNTO_PCT, actual: eventoActual()?.id || null, sandbox: !chytapayEsProduccion(), precioIncluyeCargo: SITIO.precioIncluyeCargo, modo: SITIO.modo,
-    sala: SITIO.sala || null,
+    sala: SITIO.sala || null, cortesias: veCortesias(req),   // si este usuario emite y ve las cortesías
     // unidadPunto: lo que cobra la boletería por entrada hoy (mismo cálculo que el servidor).
     eventos: [...EVENTOS.values()].map(e => ({ id: e.id, nombre: e.nombre, fecha: e.fecha, cuando: cuandoDe(e), pasado: !noPaso(e), ...(SALA ? { numerada: usaSala(e) } : {}),
       tipos: e.tipos.map(t => ({ ...t, unidadPunto: finalDe(precioVigente(t), CARGO_PUNTO_PCT) })) })) })

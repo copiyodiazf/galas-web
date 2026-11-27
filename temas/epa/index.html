@@ -297,6 +297,57 @@ h1 .quieras{display:block;font-weight:900;font-size:clamp(18px,5.6vw,34px);lette
 .frase .junto{white-space:nowrap;}
 .solo-lector{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
 
+/* ═════ 2b) CRONOGRAMA (EPA, 27/11/2026): una línea de luz que se dibuja al bajar; cada horario entra en 3D y sus números
+   se deslizan de a uno; el saludo final, en dorado. Solo transform y opacity, y cada cosa se anima una vez ═════ */
+.cronograma{z-index:2;padding:90px 0 70px;background:radial-gradient(ellipse 80% 45% at 50% 0%,rgba(139,108,240,.32),transparent 70%),linear-gradient(180deg,#050e45,#0d1d86 55%,#050e45);
+  box-shadow:0 -30px 60px rgba(5,14,69,.7);}
+/* overflow:clip y no hidden: con hidden la sección es un "contenedor de scroll" y la línea medía su avance contra la sección
+   (que no se mueve) en lugar de contra la pantalla, y quedaba quieta a medio dibujar */
+.cronograma{overflow:clip;}
+.crono-fondo{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
+.crono-luz{position:absolute;width:70vmax;height:70vmax;border-radius:50%;}
+.crono-luz.l1{left:-32vmax;top:8%;background:radial-gradient(circle,rgba(255,79,163,.2),transparent 62%);animation:deriva-1 30s ease-in-out infinite alternate;}
+.crono-luz.l2{right:-32vmax;bottom:-12%;background:radial-gradient(circle,rgba(26,60,240,.3),transparent 62%);animation:deriva-2 36s ease-in-out infinite alternate;}
+.linea{list-style:none;position:relative;max-width:760px;margin:34px auto 0;padding:0;}
+/* La línea de luz que une los horarios: se dibuja de arriba hacia abajo a medida que se baja */
+.linea::before{content:"";position:absolute;left:30px;top:10px;bottom:24px;width:3px;border-radius:3px;transform-origin:50% 0;
+  background:linear-gradient(180deg,var(--rosa),var(--lila) 55%,var(--oro));box-shadow:0 0 14px rgba(255,79,163,.55);}
+@supports (animation-timeline:view()){
+  /* La punta va más o menos a los dos tercios de la pantalla (con calc y vh el navegador descarta la regla: van porcentajes
+     del recorrido, medidos con la lista en el celular y en la compu) */
+  .linea::before{animation:trazar linear both;animation-timeline:view();animation-range:cover 12% cover 72%;}
+  @keyframes trazar{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+}
+.tramo{position:relative;display:grid;grid-template-columns:64px 1fr;gap:14px;align-items:start;margin:0 0 20px;perspective:900px;}
+.hora{position:relative;z-index:1;width:64px;height:64px;border-radius:50%;display:grid;place-content:center;text-align:center;color:#fff;
+  background:radial-gradient(circle at 35% 30%,#ff8cc6,var(--rosa) 55%,#c4237a);box-shadow:0 0 0 5px #08135a,0 0 26px rgba(255,79,163,.6);}
+.hora span{font-weight:900;font-size:16px;line-height:1;letter-spacing:-.02em;}
+.hora small{font-weight:800;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.85;margin-top:3px;}
+.tarjeta-crono{padding:6px 16px;border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.04));
+  border:1.5px solid rgba(255,255,255,.22);box-shadow:0 24px 50px -28px rgba(0,0,0,.85);transform-origin:0 50%;}
+.numero{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1);}
+.numero:last-child{border-bottom:0;}
+.nro{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#fff;color:#1a3cf0;font-weight:900;font-size:15px;box-shadow:0 6px 16px -6px rgba(255,79,163,.8);}
+.nro svg{width:20px;height:20px;}
+.numero strong{display:block;font-weight:800;font-size:16.5px;line-height:1.25;color:#fff;}
+.numero span{display:block;margin-top:2px;font-size:13.5px;color:var(--rosa-claro);}
+/* Entrar: el horario rebota, la tarjeta gira en 3D desde el costado y los números se deslizan de a uno */
+.tramo .hora{opacity:0;transform:scale(.3) rotate(-120deg);transition:opacity .5s var(--curva),transform .9s cubic-bezier(.34,1.56,.64,1);}
+.tramo .tarjeta-crono{opacity:0;transform:rotateY(-40deg) translateX(50px) scale(.94);transition:opacity .7s var(--curva),transform 1.05s var(--curva);transition-delay:.1s;}
+.tramo .numero{opacity:0;transform:translateX(28px);transition:opacity .5s var(--curva),transform .7s var(--curva);transition-delay:calc(.35s + var(--j) * .13s);}
+.tramo.visto .hora,.tramo.visto .tarjeta-crono,.tramo.visto .numero{opacity:1;transform:none;}
+.tramo.visto .hora{animation:latir-hora 2.6s ease-in-out 1.2s 2;}
+@keyframes latir-hora{50%{box-shadow:0 0 0 5px #08135a,0 0 42px rgba(255,79,163,.95);}}
+@media (hover:hover){ .tramo.visto .tarjeta-crono{transition:opacity .7s var(--curva),transform .5s var(--curva);} .tramo.visto .tarjeta-crono:hover{transform:translateX(6px) rotateY(5deg) scale(1.01);} }
+/* El saludo final: dorado, con la estrella del logo y en cursiva */
+.tramo.final .hora{color:#3a2600;background:radial-gradient(circle at 35% 30%,#fff1c2,var(--oro) 55%,#c98f1c);box-shadow:0 0 0 5px #08135a,0 0 30px rgba(244,193,77,.7);}
+.tramo.final .tarjeta-crono{border-color:rgba(244,193,77,.6);background:linear-gradient(145deg,rgba(244,193,77,.2),rgba(255,255,255,.04));}
+.tramo.final .nro{background:#08135a;box-shadow:0 0 0 2px var(--oro),0 6px 16px -6px rgba(244,193,77,.8);}
+.tramo.final .numero strong{display:inline-block;font-family:var(--f-script);font-weight:400;font-size:36px;line-height:1.05;padding:.16em .2em .2em .04em;margin:-.2em 0 -.22em;
+  background:linear-gradient(180deg,#fff 0%,#ffe9a8 40%,var(--oro) 95%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+@media (min-width:880px){ .tramo{grid-template-columns:76px 1fr;gap:20px;} .hora{width:76px;height:76px;} .hora span{font-size:19px;} .linea::before{left:36px;} .numero strong{font-size:18px;} }
+@media (pointer:coarse),(max-width:879px){ .crono-luz{animation:none;} }
+
 /* ═════ 3) ENTRADAS: sobre el castillo del flyer ═════ */
 .entradas{z-index:2;padding:90px 0;}
 .entradas .fondo img{object-position:50% 30%;}
@@ -453,11 +504,13 @@ body.quieto .frase .pal{opacity:1;transform:none;filter:none;clip-path:none;}
 body.quieto .parte .letra,body.quieto .relato-cta{opacity:1;}
 body.quieto .parte em{clip-path:none;}
 body.quieto .sube{opacity:1;transform:none;}
+body.quieto .tramo .hora,body.quieto .tramo .tarjeta-crono,body.quieto .tramo .numero{opacity:1;transform:none;}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important;}
   .entra,.moneda,.mascota img,.globo{opacity:1;transform:none;}
   .frase .pal{opacity:1;transform:none;filter:none;clip-path:none;}
   .sube{opacity:1;transform:none;}
+  .tramo .hora,.tramo .tarjeta-crono,.tramo .numero{opacity:1;transform:none;}
   .logo-anim .l-aro{stroke-dashoffset:0;}
   .portada{position:relative;}
 }
@@ -601,6 +654,17 @@ body.quieto .sube{opacity:1;transform:none;}
         <div class="sube"><p class="invitacion-fija">¡Vení a vivir la magia!</p></div>
         <div class="sube" style="--retraso:.25s"><a class="relato-cta" href="#entradas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5V6.8C3 5.8 3.8 5 4.8 5h14.4c1 0 1.8.8 1.8 1.8v1.7a2.5 2.5 0 0 0 0 5v1.7c0 1-.8 1.8-1.8 1.8H4.8c-1 0-1.8-.8-1.8-1.8v-1.7a2.5 2.5 0 0 0 0-5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14.5 5.5v2M14.5 10.5v2M14.5 15.5v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Quiero mis entradas</a></div>
       </div>
+    </div>
+  </section>
+
+  <!-- 2b) CRONOGRAMA: lo que se va a ver el 13/12. Redibujado por nosotros (no la imagen del flyer); sale de sitio.json → "cronograma" -->
+  <section class="pantalla cronograma" id="cronograma" aria-labelledby="t-crono" hidden>
+    <div class="crono-fondo" aria-hidden="true"><span class="crono-luz l1"></span><span class="crono-luz l2"></span></div>
+    <div class="envase">
+      <p class="ante entra">Domingo 13 de diciembre · Estadio Arena</p>
+      <h2 class="entra" id="t-crono">Cronograma <em>del show</em></h2>
+      <p class="bajada entra" id="crono-bajada">Doce números y una sola noche. Buscá el de tu patinadora y quedate hasta el saludo final.</p>
+      <ol class="linea" id="linea"></ol>
     </div>
   </section>
 
@@ -754,6 +818,27 @@ body.quieto .sube{opacity:1;transform:none;}
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const pesos = n => '$' + Number(n).toLocaleString('es-AR');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// ───── El cronograma (sitio.json → "cronograma", el mismo que va en el mail de bienvenida): cada horario entra al verse ─────
+function pintarCronograma(cr) {
+  if (!cr?.bloques?.length) return;
+  const total = cr.bloques.reduce((a, b) => a + b.numeros.filter(x => x.n).length, 0);
+  const nombres = ['', 'Un número', 'Dos números', 'Tres números', 'Cuatro números', 'Cinco números', 'Seis números', 'Siete números', 'Ocho números', 'Nueve números', 'Diez números', 'Once números', 'Doce números'];
+  if (nombres[total]) $('#crono-bajada').textContent = `${nombres[total]} y una sola noche. Buscá el de tu patinadora y quedate hasta el saludo final.`;
+  const estrella = '<svg viewBox="0 0 20 20" aria-hidden="true"><use href="#estrella" width="20" height="20"/></svg>';
+  $('#linea').innerHTML = cr.bloques.map(b => {
+    const final = b.numeros.length === 1 && !b.numeros[0].n;
+    return `<li class="tramo${final ? ' final' : ''}">
+      <div class="hora"><span>${esc(b.hora)}</span><small>hs</small></div>
+      <div class="tarjeta-crono">${b.numeros.map((x, j) => `<div class="numero" style="--j:${j}">
+        <b class="nro"${x.n ? '' : ' aria-hidden="true"'}>${x.n || estrella}</b>
+        <div><strong>${esc(x.titulo)}</strong>${x.grupo || x.sede ? `<span>${[x.grupo, x.sede].filter(Boolean).map(esc).join(' · ')}</span>` : ''}</div>
+      </div>`).join('')}</div>
+    </li>`;
+  }).join('');
+  $('#cronograma').hidden = false;
+  const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { en.target.classList.add('visto'); io.unobserve(en.target); } }), { threshold: 0.3 });
+  $$('.tramo').forEach(li => io.observe(li));
+}
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const dm = f => { const d = new Date(f + 'T12:00:00Z'); return `${DIAS[d.getUTCDay()]} ${d.getUTCDate()}/${d.getUTCMonth() + 1}`; };
 // Sin animaciones ni videos que corran solos si la persona lo pidió o tiene el ahorro de datos prendido.
@@ -779,6 +864,7 @@ if (PREVIA) {
 const desglose = c => Boolean(c?.sitio?.desgloseServicio);
 const precioTxt = (c, t) => desglose(c) ? `${pesos(t.precio)}<small>+ ${pesos(t.final - t.precio)} de servicio</small>` : pesos(t.final);
 (PREVIA ? Promise.resolve(PREVIA) : fetch('/api/config').then(r => r.json())).then(c => {
+  pintarCronograma(c.sitio?.cronograma);
   const wa = c.sitio?.ayudaWhatsapp;
   if (wa) for (const a of $$('[data-wa]')) {
     a.href = `https://wa.me/${encodeURIComponent(wa)}?text=${encodeURIComponent('Hola, tengo una consulta sobre las entradas del Show de Fin de Año de EPA.')}`;

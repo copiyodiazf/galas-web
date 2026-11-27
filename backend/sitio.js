@@ -105,6 +105,38 @@ function festejoDe(f) {
   return Object.keys(mapa).length ? mapa : null
 }
 
+// Cronograma del show (EPA, 27/11/2026): bloques por hora, cada uno con sus números. Lo muestra la página y va en el
+// mail de bienvenida. { "titulo", "bloques": [{ "hora": "20:00", "numeros": [{ "n": 1, "titulo": "El gran show",
+// "grupo": "Avanzado", "sede": "Sarmiento" }] }] }. Un número sin "n" (el saludo final) va sin numerar.
+function cronogramaDe(c) {
+  if (!c || !Array.isArray(c.bloques) || !c.bloques.length) return null
+  const bloques = []
+  for (const b of c.bloques.slice(0, 20)) {
+    const hora = limpio(b.hora, 10)
+    if (!/^\d{1,2}:\d{2}$/.test(hora)) throw new Error(`sitio.json, cronograma: la hora "${b.hora}" va como 20:30`)
+    const numeros = (Array.isArray(b.numeros) ? b.numeros : []).slice(0, 12).map(x => ({
+      n: Number.isInteger(x.n) && x.n > 0 ? x.n : null, titulo: limpio(x.titulo, 80), grupo: limpio(x.grupo, 60) || null, sede: limpio(x.sede, 60) || null,
+    })).filter(x => x.titulo)
+    if (!numeros.length) throw new Error(`sitio.json, cronograma: el bloque de las ${hora} no tiene números`)
+    bloques.push({ hora, numeros })
+  }
+  return { titulo: limpio(c.titulo, 80) || 'Cronograma del show', bloques }
+}
+
+// Mail de bienvenida (EPA, 27/11/2026): le llega al comprador cuando en la puerta escanean la primera entrada de su
+// compra, con su nombre, unas palabras del show y el cronograma. Sin "bienvenida" en la ficha no se manda nada.
+// En el asunto y en los párrafos, {nombre} es el primer nombre del comprador.
+function bienvenidaDe(b) {
+  if (!b || !Array.isArray(b.parrafos) || !b.parrafos.length) return null
+  return {
+    asunto: limpio(b.asunto, 140) || '¡Te damos la bienvenida, {nombre}!',
+    titulo: limpio(b.titulo, 100) || '¡Hola, {nombre}!',
+    parrafos: b.parrafos.map(p => limpio(p, 700)).filter(Boolean).slice(0, 5),
+    cierre: limpio(b.cierre, 300) || null,
+    firma: limpio(b.firma, 120) || null,
+  }
+}
+
 // Sala con butacas numeradas (opcional: sin "sala", la venta es por cantidad, como siempre).
 // Cada fila: { "fila": "1", "asientos": 22 } o, si tiene huecos (una cabina, un pasillo),
 // { "fila": "13", "bloques": [9, { "hueco": "Cabina", "ancho": 8 }, 9] }. Los bloques van desde el lado del
@@ -174,6 +206,9 @@ export function leerSitio(archivo = process.env.SITIO_ARCHIVO || 'sitio.json') {
       // true = la página muestra el precio del organizador "+ costo de servicio" y la compra desglosa
       // entradas, servicio y total (Patio de Oli, 09/11). Sin eso, un solo precio final en todos lados.
       desgloseServicio: s.desgloseServicio === true && s.precioIncluyeCargo !== true,
+      // true = el organizador también emite y ve las cortesías (El Quinto Elemento, José 27/11/2026). Sin eso, como
+      // desde el 21/11: son solo de la administración.
+      cortesiasOrganizador: s.cortesiasOrganizador === true,
       mail: coloresMail(s.mail || {}),
       // Secciones opcionales de la página: quiénes somos y el llamado a feriantes/emprendedores.
       sobre: s.sobre?.titulo ? { titulo: limpio(s.sobre.titulo, 80), parrafos: (s.sobre.parrafos || []).map(p => limpio(p, 600)).filter(Boolean).slice(0, 6) } : null,
@@ -189,6 +224,8 @@ export function leerSitio(archivo = process.env.SITIO_ARCHIVO || 'sitio.json') {
       sala: salaDe(s.sala),
       // Confeti al confirmarse la compra (opcional): colores por id de evento y "*" para los demás.
       festejo: festejoDe(s.festejo),
+      cronograma: cronogramaDe(s.cronograma),
+      bienvenida: bienvenidaDe(s.bienvenida),
       feriantes: s.feriantes?.whatsapp ? { titulo: limpio(s.feriantes.titulo || 'Feriantes y emprendedores', 80), texto: limpio(s.feriantes.texto, 600),
         whatsapp: String(s.feriantes.whatsapp).replace(/\D/g, ''), mensaje: limpio(s.feriantes.mensaje, 200) } : null,
     },

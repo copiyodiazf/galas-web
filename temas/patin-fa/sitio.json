@@ -23,6 +23,7 @@
   "menores": "Pagan entrada desde los 11 años (presentarse con DNI). Las y los patinadores del show no pagan.",
   "modo": "gala",
   "precioIncluyeCargo": true,
+  "cortesiasOrganizador": true,
   "eventos": [
     {
       "id": "2026-12-13-el-quinto-elemento",

@@ -41,7 +41,124 @@
       "imagen": "/assets/arte/arte-princesas-600.webp",
       "publicado": true,
       "artistas": [],
-      "tipos": []
+      "tipos": [],
+      "hora": "20:00"
     }
-  ]
+  ],
+  "cronograma": {
+    "titulo": "Cronograma del show",
+    "bloques": [
+      {
+        "hora": "20:00",
+        "numeros": [
+          {
+            "n": 1,
+            "titulo": "El gran show",
+            "grupo": "Avanzado",
+            "sede": "Sarmiento"
+          },
+          {
+            "n": 2,
+            "titulo": "Aladdín y Jazmín",
+            "grupo": "Kids",
+            "sede": "Sarmiento"
+          },
+          {
+            "n": 3,
+            "titulo": "Rapunzel",
+            "grupo": "Tarde",
+            "sede": "Sarmiento"
+          }
+        ]
+      },
+      {
+        "hora": "20:30",
+        "numeros": [
+          {
+            "n": 4,
+            "titulo": "La Bella y la Bestia",
+            "grupo": "Kids",
+            "sede": "Atlético"
+          },
+          {
+            "n": 5,
+            "titulo": "La Sirenita y amigos marinos",
+            "sede": "Martín Ferreyra"
+          },
+          {
+            "n": 6,
+            "titulo": "Encanto",
+            "grupo": "Inicial",
+            "sede": "Atlético"
+          }
+        ]
+      },
+      {
+        "hora": "21:00",
+        "numeros": [
+          {
+            "n": 7,
+            "titulo": "Maléfica",
+            "grupo": "Adultos",
+            "sede": "Sarmiento"
+          },
+          {
+            "n": 8,
+            "titulo": "Frozen",
+            "grupo": "Inicial",
+            "sede": "Atlético"
+          },
+          {
+            "n": 9,
+            "titulo": "Blancanieves y los siete enanitos",
+            "grupo": "Mañana",
+            "sede": "Sarmiento"
+          }
+        ]
+      },
+      {
+        "hora": "21:30",
+        "numeros": [
+          {
+            "n": 10,
+            "titulo": "Princesas",
+            "grupo": "Inicial",
+            "sede": "Sarmiento"
+          },
+          {
+            "n": 11,
+            "titulo": "El jorobado de Notre Dame",
+            "grupo": "Adultos",
+            "sede": "Atlético"
+          },
+          {
+            "n": 12,
+            "titulo": "Mary Poppins",
+            "grupo": "Avanzado",
+            "sede": "Malagueño"
+          }
+        ]
+      },
+      {
+        "hora": "22:00",
+        "numeros": [
+          {
+            "titulo": "Saludo final",
+            "grupo": "Todas las patinadoras"
+          }
+        ]
+      }
+    ]
+  },
+  "bienvenida": {
+    "asunto": "{nombre}, ¡te damos la bienvenida a Sé la princesa que quieras ser!",
+    "titulo": "¡Hola, {nombre}! Qué alegría que estés acá",
+    "parrafos": [
+      "Ya estás en el Estadio Arena y en un ratito empieza la magia. Esta noche las patinadoras de EPA, de nuestras sedes del Club Sarmiento, el Club Atlético Carlos Paz y el Club Martín Ferreyra, te van a llevar por los cuentos de princesas, sobre ruedas.",
+      "Detrás de cada coreografía hay un año entero de entrenamientos, caídas, abrazos y sueños. Hoy es su noche: aplaudí fuerte, emocionate y viví cada número con ellas.",
+      "Te dejamos el cronograma para que no te pierdas ningún número:"
+    ],
+    "cierre": "¡Que disfrutes el show, {nombre}! Hoy cada una es la princesa que quiere ser.",
+    "firma": "Con cariño, EPA · Escuela de Patín Artístico"
+  }
 }

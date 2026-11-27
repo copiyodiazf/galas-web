@@ -203,8 +203,8 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
           <button class="chico" onclick="desmarcar()">Desmarcar</button>
         </div>
         <p class="ayuda" style="margin-top:12px;">Las <b>guardadas</b> no se pueden comprar online ni en la boletería: sirven para la familia de las chicas, las cámaras o los invitados.</p>
-        <!-- Las cortesías las da y las ve solo la administración (José, 21/11/2026) -->
-        <div class="solo-admin">
+        <!-- Las cortesías las da y las ve la administración (José, 21/11/2026); el organizador, si la gala lo habilita -->
+        <div class="con-cortesias" hidden>
         <p class="ayuda" style="margin-top:8px;">Se dan con una <b>cortesía</b>:</p>
         <div class="fila" style="margin-top:8px;"><input id="sc-nombre" placeholder="Nombre y apellido"><input id="sc-email" placeholder="Email" type="email"></div>
         <div class="fila"><input id="sc-dni" placeholder="DNI (opcional)" inputmode="numeric"><button class="chico oro" onclick="cortesiaSala()">Dar las marcadas como cortesía</button></div>
@@ -245,7 +245,7 @@ textarea{width:100%;font:600 15px var(--f-texto);color:#1d1830;background:#fffaf
         <button class="chico oro" onclick="conectarChytapay()" style="margin-top:10px;" id="cy-boton">Generar enlace para conectar la cuenta del organizador</button>
         <div id="cy-enlace"></div>
       </section>
-      <section class="tarjeta solo-admin">
+      <section class="tarjeta con-cortesias" hidden>
         <p class="paso">Cortesía (para la fecha elegida)</p>
         <p class="ayuda" id="c-con-sala" hidden>Con butacas numeradas, las cortesías se dan desde la pestaña <a href="#" onclick="abrir('sala');return false;">Sala</a>: marcás las butacas en el plano y ponés a quién van.</p>
         <div id="c-sin-sala">
@@ -382,13 +382,16 @@ function salir() { localStorage.removeItem('gala_sesion'); S = null; cerrarCamar
 const PESTANAS = {
   admin: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['punto', 'Punto de venta'], ['herramientas', 'Herramientas']],
   // El organizador: ve las ventas y carga la cartelera; no vende (sin "Punto de venta" ni pruebas) y no emite ni ve
-  // las cortesías: son solo de la administración (José, 21/11/2026).
+  // las cortesías: son solo de la administración (José, 21/11/2026), salvo en la gala que lo habilite
+  // (cortesiasOrganizador en sitio.json: El Quinto Elemento, 27/11/2026).
   // En una gala de una sola fecha tampoco ve la cartelera (los precios y las etapas los carga José en la ficha).
   organizador: [['resumen', 'Resumen'], ['ventas', 'Operaciones'], ['cartelera', 'Cartelera'], ['puerta', 'Puerta'], ['herramientas', 'Planilla']],
   control: [['puerta', 'Puerta'], ['ventas', 'Buscar']],
   venta: [['punto', 'Vender'], ['ventas', 'Buscar']],
 };
 const ES_ADMIN = () => S.rol === 'admin';
+// Las cortesías: la administración y, si la gala lo habilita (cortesiasOrganizador), el organizador. Lo dice el servidor.
+const VE_CORTESIAS = () => Boolean(CFG?.cortesias);
 const VE_TODO = () => ['admin', 'organizador'].includes(S.rol);
 const PUEDE_REENVIAR = () => ['admin', 'venta', 'organizador'].includes(S.rol);   // el organizador también (es su evento)
 let PEST = null;
@@ -413,8 +416,10 @@ async function armar() {
   $$('.ve-todo').forEach(e => e.hidden = !VE_TODO());
   $$('.puede-reenviar').forEach(e => e.hidden = !PUEDE_REENVIAR());
   try { await cargarCfg(); } catch (e) { alert(e.message); }
+  $$('.con-cortesias').forEach(e => e.hidden = !VE_CORTESIAS());
   // Con butacas numeradas aparece la pestaña Sala (el plano), después del Resumen (o de la Puerta).
-  const pestanas = PESTANAS[S.rol].slice();
+  // Si el organizador da cortesías, su pestaña "Planilla" vuelve a ser "Herramientas" (tiene las dos cosas).
+  const pestanas = PESTANAS[S.rol].map(([k, t]) => k === 'herramientas' && S.rol === 'organizador' && VE_CORTESIAS() ? [k, 'Herramientas'] : [k, t]);
   if (CFG?.sala && ['admin', 'organizador', 'control'].includes(S.rol)) pestanas.splice(1, 0, ['sala', 'Sala']);
   $('#tabs').innerHTML = pestanas.map(([k, t]) => `<button data-t="${k}">${t}</button>`).join('');
   $$('#tabs button').forEach(b => b.onclick = () => abrir(b.dataset.t));
@@ -742,11 +747,11 @@ async function cargarSala() {
       S_EV = EVA; MARCADAS = []; $('#s-quien').hidden = true;
       S_PLANO = Plano.crear($('#s-plano'), { sala: CFG.sala, estado: estadoSala, alTocar: tocarSala,
         extra: id => { const b = S_DATOS.butacas[id]; return `${Plano.etiqueta(CFG.sala, id)}${b?.estado === 'ocupada' ? ' · no disponible' : b ? ' · ' + (ESTADO_BUTACA[b.estado] || b.estado) + (b.nombre ? ' · ' + b.nombre : '') : ' · libre'}`; } });
-      $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['eligiendo', 'Eligiéndose en la web'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['retenida', 'Venció sin pagar'], ...(ES_ADMIN() ? [['cortesia', 'Cortesía']] : []), ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
+      $('#s-leyenda').innerHTML = Plano.leyenda([['libre', 'Libre'], ['eligiendo', 'Eligiéndose en la web'], ['vendida', 'Vendida'], ['pagando', 'Pagándose'], ['retenida', 'Venció sin pagar'], ...(VE_CORTESIAS() ? [['cortesia', 'Cortesía']] : []), ['bloqueada', 'Guardada'], ['libre marcada', 'Marcada'], ['vendida entro', 'Ya entró (raya abajo)']]);
     } else S_PLANO.refrescar();
     const c = S_DATOS.cuentas;
     $('#s-cifras').innerHTML = [[c.libres, 'Libres'], [c.eligiendo || 0, 'Eligiéndose en la web'], [c.vendida, 'Vendidas'], [c.pagando, 'Pagándose ahora'],
-      ...(c.retenida ? [[c.retenida, 'Vencidas sin pagar (guardadas)']] : []), ...(ES_ADMIN() ? [[c.cortesia, 'Cortesías']] : []), [c.bloqueada, 'Guardadas'], [S_DATOS.total, 'Butacas de la sala']]
+      ...(c.retenida ? [[c.retenida, 'Vencidas sin pagar (guardadas)']] : []), ...(VE_CORTESIAS() ? [[c.cortesia, 'Cortesías']] : []), [c.bloqueada, 'Guardadas'], [S_DATOS.total, 'Butacas de la sala']]
       .map(([b, s]) => `<div class="cifra"><b>${b}</b><span>${s}</span></div>`).join('');
     pintarMarcadas();
   } catch (x) { alert(x.message); }
